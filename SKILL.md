@@ -33,12 +33,13 @@ metadata:
 npm install -g lbp-growth-calendar
 ```
 
-## 配置凭据（任选其一）
+## 配置 Token（任选其一）
+
+API 基础地址已内置，无需配置。只需提供 Bearer Token 即可使用。
 
 ### 方式一：环境变量（推荐用于 CI/CD）
 
 ```bash
-export LBP_GROWTH_CALENDAR_BASE_URL="https://your-api-host.com"
 export LBP_GROWTH_CALENDAR_TOKEN="your_bearer_token_here"
 ```
 
@@ -192,8 +193,9 @@ lbp-growth-calendar correct --date 2026-07-15 \
 
 | 选项 | 说明 |
 |------|------|
-| `--base-url <url>` | API 基础地址（可用 `LBP_GROWTH_CALENDAR_BASE_URL` 环境变量） |
 | `--token <token>` | Bearer Token（可用 `LBP_GROWTH_CALENDAR_TOKEN` 环境变量，优先级高于配置文件） |
+
+> **注意**：API 基础地址已内置，无需配置。如需覆盖，可设置 `LBP_GROWTH_CALENDAR_BASE_URL` 环境变量。
 
 ## Agent 使用示例
 
