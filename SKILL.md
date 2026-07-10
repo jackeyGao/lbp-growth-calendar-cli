@@ -3,7 +3,7 @@ name: lbp-growth-calendar
 description: 增长日历 CLI：DAU 数据查询、增长事件管理、数据订正 - 完全非交互式，AI/Agent 友好
 metadata:
   author: LBP Growth Team
-  version: 1.2.2
+  version: 1.2.3
   tags:
     - lbp
     - growth
