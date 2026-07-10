@@ -1,6 +1,6 @@
 {
   "name": "lbp-growth-calendar",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "增长日历 CLI 工具 - Agent AI Friendly，支持 DAU 查询、事件管理与数据订正",
   "main": "dist/index.js",
   "bin": {

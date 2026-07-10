@@ -1,35 +1,21 @@
 import { Command } from 'commander';
-import * as readline from 'readline';
 import { saveToken, getToken, configFilePath } from '../utils/config';
-import { outputJSON } from '../utils/http';
+import { outputJSON, outputError } from '../utils/http';
 
 export function registerAuthCommand(program: Command): void {
   const auth = program
     .command('auth')
     .description('认证管理（Token 配置）');
 
-  // auth save --token <token>
+  // auth save <token>
   auth
-    .command('save')
+    .command('save <token>')
     .description('保存 Token 到本地配置文件')
-    .option('--token <token>', '要保存的 Token')
-    .action(async (opts) => {
-      let token: string = opts.token || '';
+    .action(async (token: string) => {
 
       if (!token) {
-        // 交互式输入
-        const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-        token = await new Promise<string>((resolve) => {
-          rl.question('请输入 Token（Token 可以找 jg 要）：', (answer) => {
-            rl.close();
-            resolve(answer.trim());
-          });
-        });
-      }
-
-      if (!token) {
-        outputJSON({ ok: false, error: 'INVALID_ARGS', message: 'Token 不能为空' });
-        process.exit(1);
+        outputError('Token 不能为空，请使用：lbp-growth-calendar auth save <token>', 'INVALID_ARGS');
+        return;
       }
 
       saveToken(token);
@@ -57,7 +43,7 @@ export function registerAuthCommand(program: Command): void {
         outputJSON({
           ok: false,
           configured: false,
-          message: '尚未配置 Token，请执行：lbp-growth-calendar auth save --token <your-token>\nToken 可以找 jg 要',
+          message: '尚未配置 Token，请执行：lbp-growth-calendar auth save <token>\nToken 可以找 jg 要',
           configFile: configFilePath(),
         });
       }
