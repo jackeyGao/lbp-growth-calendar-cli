@@ -5,11 +5,12 @@
 ## 特性
 
 - **结构化 JSON 输出**：所有命令默认输出 `{ "ok": true, "data": ... }` 结构，方便 AI Agent 和程序化调用
-- **清晰的命令层次**：`dau`（查询）、`events`（增删改查）、`correct-meta`/`correct-event`/`correct`（订正）
+- **清晰的命令层次**：`auth`（认证）、`dau`（查询）、`events`（增删改查）、`correct-meta`/`correct-event`/`correct`（订正）
 - **AI Friendly 原子操作**：订正接口是全量覆盖语义，CLI 提供 `correct-meta` 与 `correct-event add|update|delete` 自动合并当日数据，避免误删
 - **全量高级模式**：`correct` 命令支持直接传完整 events 列表或 JSON 文件，适合脚本批处理
 - **一致的错误结构**：错误输出 `{ "ok": false, "error": "CODE", "message": "..." }` 且退出码非 0
 - **环境变量支持**：`LBP_GROWTH_CALENDAR_BASE_URL` 和 `LBP_GROWTH_CALENDAR_TOKEN`
+- **无交互式设计**：所有命令完全非交互式，所有参数通过 CLI 参数或环境变量传入，适合自动化脚本和 AI Agent 调用
 
 ## 安装
 
@@ -21,10 +22,48 @@ npm install -g lbp-growth-calendar
 
 | 环境变量 | 命令行参数 | 说明 |
 |---------|----------|------|
-| `LBP_GROWTH_CALENDAR_BASE_URL` | `--base-url <url>` | API 基础地址（默认 http://localhost:3000） |
-| `LBP_GROWTH_CALENDAR_TOKEN` | `--token <token>` | Bearer 认证 Token |
+| `LBP_GROWTH_CALENDAR_BASE_URL` | `--base-url <url>` | API 基础地址 |
+| `LBP_GROWTH_CALENDAR_TOKEN` | `--token <token>` | Bearer 认证 Token（优先级高于配置文件） |
+
+## 快速开始
+
+### 1. 配置 Token（任选其一）
+
+**方式一：环境变量（推荐用于 CI/CD）**
+```bash
+export LBP_GROWTH_CALENDAR_TOKEN="your_token_here"
+```
+
+**方式二：本地配置文件（推荐用于本地开发）**
+```bash
+lbp-growth-calendar auth save <your-token>
+```
+
+**方式三：命令行参数**
+```bash
+lbp-growth-calendar --token <your-token> dau list --start-date 2026-07-01
+```
+
+### 2. 验证配置
+
+```bash
+lbp-growth-calendar auth status
+```
 
 ## 命令一览
+
+### 认证管理
+
+```bash
+# 保存 Token 到本地配置文件
+lbp-growth-calendar auth save <token>
+
+# 查看当前 Token 配置状态
+lbp-growth-calendar auth status
+
+# 清除本地保存的 Token
+lbp-growth-calendar auth clear
+```
 
 ### DAU 数据查询
 
