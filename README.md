@@ -1,0 +1,121 @@
+# lbp-growth-calendar
+
+增长日历 CLI 工具 —— Agent AI Friendly 规范
+
+## 特性
+
+- **结构化 JSON 输出**：所有命令默认输出 `{ "ok": true, "data": ... }` 结构，方便 AI Agent 和程序化调用
+- **清晰的命令层次**：`dau`（查询）、`events`（增删改查）、`correct-meta`/`correct-event`/`correct`（订正）
+- **AI Friendly 原子操作**：订正接口是全量覆盖语义，CLI 提供 `correct-meta` 与 `correct-event add|update|delete` 自动合并当日数据，避免误删
+- **全量高级模式**：`correct` 命令支持直接传完整 events 列表或 JSON 文件，适合脚本批处理
+- **一致的错误结构**：错误输出 `{ "ok": false, "error": "CODE", "message": "..." }` 且退出码非 0
+- **环境变量支持**：`LBP_GROWTH_CALENDAR_BASE_URL` 和 `LBP_GROWTH_CALENDAR_TOKEN`
+
+## 安装
+
+```bash
+npm install -g lbp-growth-calendar
+```
+
+## 配置
+
+| 环境变量 | 命令行参数 | 说明 |
+|---------|----------|------|
+| `LBP_GROWTH_CALENDAR_BASE_URL` | `--base-url <url>` | API 基础地址（默认 http://localhost:3000） |
+| `LBP_GROWTH_CALENDAR_TOKEN` | `--token <token>` | Bearer 认证 Token |
+
+## 命令一览
+
+### DAU 数据查询
+
+```bash
+lbp-growth-calendar dau list --start-date 2026-07-01 --end-date 2026-07-31
+```
+
+### 事件管理
+
+```bash
+lbp-growth-calendar events list --start-date 2026-07-01 --end-date 2026-07-31
+lbp-growth-calendar events list --event-type activation
+lbp-growth-calendar events get <id>
+lbp-growth-calendar events create --date 2026-07-15 --event-type activation \
+  --name "渠道投放-抖音" --expected-users 4.2 --tags "渠道&SMB"
+lbp-growth-calendar events update <id> --name "..." --expected-users 5.1
+lbp-growth-calendar events delete <id>
+```
+
+### 数据订正
+
+**AI Friendly 原子操作**（推荐）：CLI 自动拉取当日数据并合并，避免误删事件。
+
+```bash
+# 只订正 DAU / 额度 / 说明
+lbp-growth-calendar correct-meta --date 2026-07-15 \
+  --corrected-dau 35.0 --quota 12.5 --correction-note "新版本灰度放量"
+
+# 只订正说明也可以
+lbp-growth-calendar correct-meta --date 2026-07-15 --correction-note "确认正常波动"
+
+# 单条事件增删改
+lbp-growth-calendar correct-event add --date 2026-07-15 \
+  --event-type activation --name "渠道投放-抖音" --expected-users 4.2 --tags "渠道&SMB"
+
+lbp-growth-calendar correct-event update <event-id> --date 2026-07-15 \
+  --expected-users 5.1
+
+lbp-growth-calendar correct-event delete <event-id> --date 2026-07-15
+```
+
+**全量模式**（脚本使用）：直接传完整 events 列表，未列出的事件会被删除。
+
+```bash
+# 通过 JSON 字符串
+lbp-growth-calendar correct --date 2026-07-15 \
+  --corrected-dau 35.0 --quota 12.5 --correction-note "订正说明" \
+  --events '[{"id":"e805...","eventType":"activation","name":"...","expectedUsers":4.2}]'
+
+# 通过 JSON 文件
+lbp-growth-calendar correct --date 2026-07-15 --events-file events.json
+```
+
+## Agent AI Friendly 规范说明
+
+1. **机器可解析**：输出格式为 JSON，`ok` 字段标识成功/失败
+2. **原子操作优先**：`correct-meta` 与 `correct-event` 让 AI 只关注单点改动，无需担心全量覆盖误删
+3. **自描述性**：`--help` 提供详细的参数说明
+4. **一致性**：所有命令使用统一的参数命名规范（`--start-date`, `--end-date`, `--event-type`, `--date`）
+5. **幂等性**：GET 请求幂等；PUT/DELETE 操作基于 ID
+6. **错误处理**：错误输出结构化 JSON 且进程退出码非 0
+7. **无交互式提示**：所有参数通过命令行或环境变量传入
+
+## 输出格式
+
+### 成功
+
+```json
+{
+  "ok": true,
+  "data": ...
+}
+```
+
+### 失败
+
+```json
+{
+  "ok": false,
+  "error": "NOT_FOUND",
+  "message": "事件 xxx 不存在"
+}
+```
+
+## 返回码
+
+| 码 | 含义 |
+|----|------|
+| 0 | 成功 |
+| 1 | 请求失败 / 参数错误 / 资源不存在 |
+
+## License
+
+MIT
