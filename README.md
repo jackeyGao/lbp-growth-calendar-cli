@@ -9,7 +9,7 @@
 - **AI Friendly 原子操作**：订正接口是全量覆盖语义，CLI 提供 `correct-meta` 与 `correct-event add|update|delete` 自动合并当日数据，避免误删
 - **全量高级模式**：`correct` 命令支持直接传完整 events 列表或 JSON 文件，适合脚本批处理
 - **一致的错误结构**：错误输出 `{ "ok": false, "error": "CODE", "message": "..." }` 且退出码非 0
-- **双 Token 认证**：同时携带内置 Bearer Token 和用户 API Key，确保安全访问
+- **双 Token 认证**：同时携带内置 Token 和用户 API Key，确保安全访问
 - **无交互式设计**：所有命令完全非交互式，所有参数通过 CLI 参数或环境变量传入，适合自动化脚本和 AI Agent 调用
 - **自主授权流程**：支持 `init` -> 浏览器授权 -> `verify` 的完整 OAuth 风格授权流程
 
@@ -24,12 +24,12 @@ npm install -g lbp-growth-calendar
 ### 1. 授权流程（获取 Token）
 
 需要两个 Token：
-- **Bearer Token**（固定，长期有效）：从管理员获取，用于访问 init/verify 接口
+- **Token**（固定，长期有效）：从管理员获取，用于访问 init/verify 接口
 - **API Key**（动态，有过期时间）：通过 verify 获取，用于访问业务接口
 
 ```bash
-# 步骤 1: 提供 Bearer Token，发起授权流程
-lbp-growth-calendar auth init --bearer-token <your-bearer-token>
+# 步骤 1: 提供 Token，发起授权流程
+lbp-growth-calendar auth init --token <your-bearer-token>
 
 # 步骤 2: 【用户手动操作】在浏览器中访问输出的 authUrl，完成登录授权
 # ⚠️ 注意：此步骤必须由用户手动完成，Agent 绝对不能自动调用浏览器！
@@ -172,12 +172,12 @@ lbp-growth-calendar correct --date 2026-07-15 --events-file events.json
 
 ### 常见错误
 
-**缺少 Bearer Token**
+**缺少 Token**
 ```json
 {
   "ok": false,
   "error": "MISSING_BEARER_TOKEN",
-  "message": "Bearer Token 不能为空。请联系 jg（俊奇）获取 --bearer-token 参数。"
+  "message": "Token 不能为空。请联系 jg（俊奇）获取 --token 参数。"
 }
 ```
 
@@ -189,7 +189,7 @@ lbp-growth-calendar correct --date 2026-07-15 --events-file events.json
   "title": "认证失败",
   "reason": "Token 无效、已过期或未提供",
   "suggestion": [
-    "1. 确认 Bearer Token 正确且未过期（请联系 jg（俊奇）获取）",
+    "1. 确认 Token 正确且未过期（请联系 jg（俊奇）获取）",
     "2. 确认 API Key 未过期（如过期需重新执行 verify）",
     "3. 确认 Token 有访问该接口的权限",
     "4. 如问题持续，请联系 jg（俊奇）技术支持"

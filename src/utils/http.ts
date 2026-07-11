@@ -1,5 +1,5 @@
 import fetch from 'node-fetch';
-import { getBearerToken, getApiKey } from './config';
+import { getToken, getApiKey } from './config';
 
 export const BASE_URL = 'https://bytedance.aiforce.cloud/app/app_179t4b8e4mv';
 
@@ -7,14 +7,14 @@ export const BASE_URL = 'https://bytedance.aiforce.cloud/app/app_179t4b8e4mv';
 const CONTACT_INFO = '请联系 jg（俊奇）';
 
 export interface RequestOptions {
-  bearerToken: string;
+  token: string;
   apiKey?: string;
 }
 
 export function getRequestOptions(): RequestOptions {
-  const bearerToken = getBearerToken();
+  const token = getToken();
   const apiKey = getApiKey();
-  return { bearerToken, apiKey };
+  return { token, apiKey };
 }
 
 /**
@@ -55,18 +55,18 @@ function checkAuthError(data: unknown, status: number): void {
  * 检查是否已配置认证
  */
 function checkAuthConfigured(): void {
-  const bearerToken = getBearerToken();
+  const token = getToken();
   const apiKey = getApiKey();
 
-  if (!bearerToken && !apiKey) {
+  if (!token && !apiKey) {
     console.error(JSON.stringify({
       ok: false,
       error: 'NOT_CONFIGURED',
       title: '未配置认证信息',
-      reason: '本地未找到 Bearer Token 和 API Key',
+      reason: '本地未找到 Token 和 API Key',
       suggestion: [
-        `1. 获取 Bearer Token（${CONTACT_INFO}）`,
-        '2. 执行: lbp-growth-calendar auth init --bearer-token <token>',
+        `1. 获取 Token（${CONTACT_INFO}）`,
+        '2. 执行: lbp-growth-calendar auth init --token <token>',
         '3. 在浏览器中完成授权',
         '4. 执行: lbp-growth-calendar auth verify <code>',
       ],
@@ -75,12 +75,12 @@ function checkAuthConfigured(): void {
     process.exit(1);
   }
 
-  if (bearerToken && !apiKey) {
+  if (token && !apiKey) {
     console.error(JSON.stringify({
       ok: false,
       error: 'API_KEY_MISSING',
       title: '缺少 API Key',
-      reason: 'Bearer Token 已配置，但 API Key 未获取（verify 步骤未完成）',
+      reason: 'Token 已配置，但 API Key 未获取（verify 步骤未完成）',
       suggestion: [
         '1. 确认已在浏览器中完成授权',
         '2. 获取授权码并执行: lbp-growth-calendar auth verify <code>',
@@ -104,8 +104,8 @@ export async function apiRequest(
     'Content-Type': 'application/json',
   };
 
-  // 始终携带 Bearer Token（用于基础认证）
-  headers['Authorization'] = `Bearer ${options.bearerToken}`;
+  // 始终携带 Token（用于基础认证，即 Bearer Token）
+  headers['Authorization'] = `Bearer ${options.token}`;
 
   // 如果有 API Key，同时携带 x-api-key（用于业务接口权限）
   if (options.apiKey) {
@@ -131,18 +131,18 @@ export async function apiRequest(
 }
 
 /**
- * 使用指定 Bearer Token 调用 API（用于 init 和 verify）
+ * 使用指定 Token 调用 API（用于 init 和 verify）
  */
 export async function apiRequestWithBearer(
   method: string,
   path: string,
-  bearerToken: string,
+  token: string,
   body?: Record<string, unknown>
 ): Promise<{ status: number; data: unknown }> {
   const url = `${BASE_URL}${path}`;
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${bearerToken}`,
+    'Authorization': `Bearer ${token}`,
   };
 
   const fetchOptions: Record<string, unknown> = {
@@ -166,10 +166,10 @@ export async function apiRequestWithBearer(
       ok: false,
       error: errorType,
       title: response.status === 401 ? '认证失败' : '禁止访问',
-      reason: 'Bearer Token 无效或没有权限访问 init/verify 接口',
+      reason: 'Token 无效或没有权限访问 init/verify 接口',
       details: message,
       suggestion: [
-        `1. 确认 Bearer Token 正确（${CONTACT_INFO}获取）`,
+        `1. 确认 Token 正确（${CONTACT_INFO}获取）`,
         '2. 确认 Token 未过期',
         '3. 确认 Token 有访问 init/verify 接口的权限',
         `4. 如问题持续，${CONTACT_INFO}技术支持`,

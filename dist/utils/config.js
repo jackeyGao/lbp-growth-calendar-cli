@@ -35,14 +35,16 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.readConfig = readConfig;
 exports.writeConfig = writeConfig;
-exports.saveBearerToken = saveBearerToken;
+exports.saveAuthCode = saveAuthCode;
+exports.getAuthCode = getAuthCode;
+exports.saveToken = saveToken;
+exports.getToken = getToken;
 exports.saveApiKey = saveApiKey;
-exports.saveTokens = saveTokens;
-exports.clearTokens = clearTokens;
-exports.getBearerToken = getBearerToken;
 exports.getApiKey = getApiKey;
+exports.saveAuth = saveAuth;
+exports.clearAuth = clearAuth;
 exports.isAuthorized = isAuthorized;
-exports.hasBearerToken = hasBearerToken;
+exports.hasToken = hasToken;
 exports.configFilePath = configFilePath;
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
@@ -67,45 +69,42 @@ function writeConfig(config) {
     fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2), 'utf8');
 }
 /**
- * 保存 Bearer Token（用户提供）
+ * 保存授权码（init 获取）
  */
-function saveBearerToken(token) {
+function saveAuthCode(authCode) {
     const config = readConfig();
-    config.bearerToken = token;
+    config.authCode = authCode;
     writeConfig(config);
 }
 /**
- * 保存 API Key（用户通过 verify 获取的 token）
+ * 获取授权码
+ */
+function getAuthCode() {
+    const config = readConfig();
+    return config.authCode || '';
+}
+/**
+ * 保存 Token（用户提供，等同于 Bearer Token）
+ */
+function saveToken(token) {
+    const config = readConfig();
+    config.token = token;
+    writeConfig(config);
+}
+/**
+ * 获取 Token（Bearer Token）
+ */
+function getToken() {
+    const config = readConfig();
+    return config.token || '';
+}
+/**
+ * 保存 API Key（通过 verify 获取）
  */
 function saveApiKey(apiKey) {
     const config = readConfig();
     config.apiKey = apiKey;
     writeConfig(config);
-}
-/**
- * 同时保存 Bearer Token 和 API Key
- */
-function saveTokens(bearerToken, apiKey) {
-    const config = readConfig();
-    config.bearerToken = bearerToken;
-    config.apiKey = apiKey;
-    writeConfig(config);
-}
-/**
- * 清除所有 Token
- */
-function clearTokens() {
-    const config = readConfig();
-    delete config.bearerToken;
-    delete config.apiKey;
-    writeConfig(config);
-}
-/**
- * 获取 Bearer Token
- */
-function getBearerToken() {
-    const config = readConfig();
-    return config.bearerToken || '';
 }
 /**
  * 获取 API Key
@@ -115,6 +114,25 @@ function getApiKey() {
     return config.apiKey || '';
 }
 /**
+ * 同时保存 Token 和 API Key
+ */
+function saveAuth(token, apiKey) {
+    const config = readConfig();
+    config.token = token;
+    config.apiKey = apiKey;
+    writeConfig(config);
+}
+/**
+ * 清除所有认证信息
+ */
+function clearAuth() {
+    const config = readConfig();
+    delete config.authCode;
+    delete config.token;
+    delete config.apiKey;
+    writeConfig(config);
+}
+/**
  * 检查是否已完成授权（有 API Key）
  */
 function isAuthorized() {
@@ -122,11 +140,11 @@ function isAuthorized() {
     return !!config.apiKey;
 }
 /**
- * 检查是否有 Bearer Token
+ * 检查是否有 Token
  */
-function hasBearerToken() {
+function hasToken() {
     const config = readConfig();
-    return !!config.bearerToken;
+    return !!config.token;
 }
 function configFilePath() {
     return CONFIG_FILE;

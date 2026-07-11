@@ -4,7 +4,7 @@ import { BASE_URL } from '../utils/http';
 jest.mock('node-fetch', () => jest.fn());
 // Mock config
 jest.mock('../utils/config', () => ({
-  getBearerToken: jest.fn(() => 'mock-bearer-token'),
+  getToken: jest.fn(() => 'mock-token'),
   getApiKey: jest.fn(() => 'mock-api-key'),
 }));
 
@@ -21,9 +21,9 @@ describe('http utils', () => {
   });
 
   describe('getRequestOptions', () => {
-    test('reads both tokens from config', () => {
+    test('reads both token and apiKey from config', () => {
       const opts = getRequestOptions();
-      expect(opts.bearerToken).toBe('mock-bearer-token');
+      expect(opts.token).toBe('mock-token');
       expect(opts.apiKey).toBe('mock-api-key');
     });
   });
@@ -40,8 +40,8 @@ describe('http utils', () => {
       } as unknown as ReturnType<typeof fetch>);
 
       const result = await apiRequest('GET', '/openapi/dau', {
-        bearerToken: 'bearer-123',
-        apiKey: 'api-456'
+        token: 'token-123',
+        apiKey: 'apikey-456'
       });
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
@@ -50,8 +50,8 @@ describe('http utils', () => {
       expect((options as Record<string, unknown>).method).toBe('GET');
 
       const headers = (options as Record<string, unknown>).headers as Record<string, string>;
-      expect(headers['Authorization']).toBe('Bearer bearer-123');
-      expect(headers['x-api-key']).toBe('api-456');
+      expect(headers['Authorization']).toBe('Bearer token-123');
+      expect(headers['x-api-key']).toBe('apikey-456');
       expect(result.status).toBe(200);
     });
 
@@ -62,11 +62,11 @@ describe('http utils', () => {
       } as unknown as ReturnType<typeof fetch>);
 
       const result = await apiRequest('GET', '/openapi/dau', {
-        bearerToken: 'bearer-123'
+        token: 'token-123'
       });
 
       const headers = ((mockFetch.mock.calls[0][1] as Record<string, unknown>).headers as Record<string, string>);
-      expect(headers['Authorization']).toBe('Bearer bearer-123');
+      expect(headers['Authorization']).toBe('Bearer token-123');
       expect(headers['x-api-key']).toBeUndefined();
     });
 
@@ -77,8 +77,8 @@ describe('http utils', () => {
       } as unknown as ReturnType<typeof fetch>);
 
       await apiRequest('POST', '/openapi/events', {
-        bearerToken: 'bearer-123',
-        apiKey: 'api-456'
+        token: 'token-123',
+        apiKey: 'apikey-456'
       }, {
         date: '2026-07-10',
         eventType: 'activation',
@@ -104,7 +104,7 @@ describe('http utils', () => {
       });
 
       await expect(
-        apiRequest('GET', '/openapi/dau', { bearerToken: 'bad-token' })
+        apiRequest('GET', '/openapi/dau', { token: 'bad-token' })
       ).rejects.toThrow('process.exit(1)');
 
       mockExit.mockRestore();
@@ -124,7 +124,7 @@ describe('http utils', () => {
       });
 
       await expect(
-        apiRequest('GET', '/openapi/dau', { bearerToken: 'valid-token' })
+        apiRequest('GET', '/openapi/dau', { token: 'valid-token' })
       ).rejects.toThrow('process.exit(1)');
 
       mockExit.mockRestore();
@@ -137,7 +137,7 @@ describe('http utils', () => {
         json: async () => mockData,
       } as unknown as ReturnType<typeof fetch>);
 
-      const result = await apiRequest('GET', '/openapi/dau', { bearerToken: 'valid-token' });
+      const result = await apiRequest('GET', '/openapi/dau', { token: 'valid-token' });
       expect(result.status).toBe(200);
       expect(result.data).toEqual(mockData);
     });
@@ -148,18 +148,18 @@ describe('http utils', () => {
       mockFetch.mockReset();
     });
 
-    test('sends request with specified Bearer token', async () => {
+    test('sends request with specified token', async () => {
       mockFetch.mockResolvedValueOnce({
         status: 200,
         json: async () => ({ code: 'abc123', authUrl: 'https://example.com/auth' }),
       } as unknown as ReturnType<typeof fetch>);
 
-      const result = await apiRequestWithBearer('POST', '/openapi/agent-auth/init', 'my-bearer-token');
+      const result = await apiRequestWithBearer('POST', '/openapi/agent-auth/init', 'my-token');
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
       const [, options] = mockFetch.mock.calls[0];
       const headers = (options as Record<string, unknown>).headers as Record<string, string>;
-      expect(headers['Authorization']).toBe('Bearer my-bearer-token');
+      expect(headers['Authorization']).toBe('Bearer my-token');
       expect(headers['x-api-key']).toBeUndefined();
       expect(result.status).toBe(200);
     });
@@ -170,7 +170,7 @@ describe('http utils', () => {
         json: async () => ({ status: 'completed', token: 'new-token' }),
       } as unknown as ReturnType<typeof fetch>);
 
-      await apiRequestWithBearer('POST', '/openapi/agent-auth/verify', 'my-bearer-token', { code: 'auth-code-123' });
+      await apiRequestWithBearer('POST', '/openapi/agent-auth/verify', 'my-token', { code: 'auth-code-123' });
 
       const [, options] = mockFetch.mock.calls[0];
       expect((options as Record<string, unknown>).body).toContain('auth-code-123');

@@ -41,20 +41,20 @@ CLI 使用双 Token 认证机制：
 
 | Token 类型 | 获取方式 | 有效期 | 用途 |
 |-----------|---------|--------|------|
-| **Bearer Token** | 从管理员获取 | 长期有效 | 访问 init/verify 接口 |
+| **Token** | 从管理员获取 | 长期有效 | 访问 init/verify 接口 |
 | **API Key** | 通过 verify 获取 | 有过期时间 | 访问业务接口（DAU、Events 等） |
 
-### 步骤 1：提供 Bearer Token，发起授权
+### 步骤 1：提供 Token，发起授权
 
 ```bash
-lbp-growth-calendar auth init --bearer-token <your-bearer-token>
+lbp-growth-calendar auth init --token <your-bearer-token>
 ```
 
 输出示例：
 ```json
 {
   "ok": true,
-  "message": "授权流程已发起，Bearer Token 已保存到本地配置",
+  "message": "授权流程已发起，Token 已保存到本地配置",
   "authCode": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6",
   "authUrl": "https://bytedance.aiforce.cloud/app/app_179t4b8e4mv/agent-auth?code=a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6",
   "instructions": [
@@ -62,7 +62,7 @@ lbp-growth-calendar auth init --bearer-token <your-bearer-token>
     "2. 完成登录授权",
     "3. 执行: lbp-growth-calendar auth verify a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6"
   ],
-  "note": "Bearer Token 和后续获取的 API Key 都已保存到本地，后续命令会自动使用"
+  "note": "Token 和后续获取的 API Key 都已保存到本地，后续命令会自动使用"
 }
 ```
 
@@ -225,12 +225,12 @@ lbp-growth-calendar correct --date 2026-07-15 \
 
 | 命令 | 说明 | AI/Agent 友好 |
 |------|------|---------------|
-| `auth init --bearer-token <token>` | 提供 Bearer Token，发起授权流程 | ✅ 非交互式 |
+| `auth init --token <token>` | 提供 Token，发起授权流程 | ✅ 非交互式 |
 | `auth verify <code>` | 用授权码换取 API Key | ✅ 非交互式 |
 | `auth status` | 查看当前 Token 配置状态 | ✅ 输出结构化 JSON |
 | `auth clear` | 清除本地保存的所有 Token | ✅ 非交互式 |
 
-**注意**：`--bearer-token` 是 init 命令的**必需参数**，需要从管理员获取。
+**注意**：`--token` 是 init 命令的**必需参数**，需要从管理员获取。
 
 ### DAU 命令
 
@@ -261,7 +261,7 @@ lbp-growth-calendar correct --date 2026-07-15 \
 ### 全局选项
 
 本 CLI 不需要全局选项。所有认证通过 `auth` 命令管理：
-- `auth init --bearer-token <token>` 设置 Bearer Token
+- `auth init --token <token>` 设置 Token
 - `auth verify <code>` 获取 API Key
 - 后续命令自动从配置文件读取两个 Token
 
@@ -273,10 +273,10 @@ lbp-growth-calendar correct --date 2026-07-15 \
 const { execSync } = require('child_process');
 
 // ========== 自主授权流程 ==========
-// 步骤 1: 提供 Bearer Token，发起授权
-const BEARER_TOKEN = '从管理员获取的 Bearer Token';
+// 步骤 1: 提供 Token，发起授权
+const BEARER_TOKEN = '从管理员获取的 Token';
 const initRes = JSON.parse(
-  execSync(`lbp-growth-calendar auth init --bearer-token ${BEARER_TOKEN}`, { encoding: 'utf8' })
+  execSync(`lbp-growth-calendar auth init --token ${BEARER_TOKEN}`, { encoding: 'utf8' })
 );
 console.log('请在浏览器中访问:', initRes.authUrl);
 
@@ -349,7 +349,7 @@ execSync('lbp-growth-calendar correct --date 2026-07-15 --events-file ./events.j
   "ok": false,
   "error": "MISSING_BEARER_TOKEN",
   "title": "缺少必要参数",
-  "reason": "Bearer Token 未提供",
+  "reason": "Token 未提供",
   "message": "具体错误描述，包含操作指引",
   "suggestion": [
     "1. 具体的解决步骤 1",
@@ -363,7 +363,7 @@ execSync('lbp-growth-calendar correct --date 2026-07-15 --events-file ./events.j
 **常见错误代码**：
 | 错误代码 | 场景 | 解决方案 |
 |---------|------|---------|
-| `MISSING_BEARER_TOKEN` | init 时未提供 --bearer-token | 请联系 jg（俊奇）获取 Bearer Token |
+| `MISSING_BEARER_TOKEN` | init 时未提供 --token | 请联系 jg（俊奇）获取 Token |
 | `UNAUTHORIZED` (401) | Token 无效或过期 | 检查 Token 或重新授权 |
 | `FORBIDDEN` (403) | 无权限访问接口 | 确认 Token 权限或联系管理员 |
 | `NOT_CONFIGURED` | 未执行授权流程 | 执行 init -> verify 完整流程 |

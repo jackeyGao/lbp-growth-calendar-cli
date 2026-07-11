@@ -1,10 +1,13 @@
 import { Command } from 'commander';
 import {
-  saveBearerToken,
+  saveAuthCode,
+  saveToken,
   saveApiKey,
-  clearTokens,
-  getBearerToken,
+  saveAuth,
+  clearAuth,
+  getToken,
   getApiKey,
+  getAuthCode,
   isAuthorized,
   configFilePath,
 } from '../utils/config';
@@ -18,28 +21,28 @@ export function registerAuthCommand(program: Command): void {
     .command('auth')
     .description('认证管理（Token 配置）');
 
-  // auth init - 发起授权流程，需要提供 bearer token
+  // auth init - 发起授权流程，需要提供 token
   auth
     .command('init')
     .description('发起授权流程，获取授权码和授权链接')
-    .requiredOption('--bearer-token <token>', `Bearer Token（${CONTACT_INFO}）`)
+    .requiredOption('--token <token>', `Token（${CONTACT_INFO}）`)
     .action(async (opts) => {
       try {
-        const bearerToken = opts.bearerToken;
+        const token = opts.token;
 
-        if (!bearerToken) {
+        if (!token) {
           outputError(
-            `Bearer Token 不能为空。${CONTACT_INFO} --bearer-token 参数。`,
-            'MISSING_BEARER_TOKEN'
+            `Token 不能为空。${CONTACT_INFO} --token 参数。`,
+            'MISSING_TOKEN'
           );
           return;
         }
 
-        // 使用用户提供的 Bearer Token 调用 init 接口
+        // 使用用户提供的 Token 调用 init 接口
         const { status, data } = await apiRequestWithBearer(
           'POST',
           '/openapi/agent-auth/init',
-          bearerToken
+          token
         );
 
         if (status === 401 || status === 403) {
@@ -49,7 +52,7 @@ export function registerAuthCommand(program: Command): void {
 
         if (status !== 200) {
           outputError(
-            `发起授权失败: HTTP ${status}。可能原因：1) Bearer Token 无效；2) 服务暂不可用。${CONTACT_INFO}有效的 Bearer Token 或稍后再试。`,
+            `发起授权失败: HTTP ${status}。可能原因：1) Token 无效；2) 服务暂不可用。${CONTACT_INFO}有效的 Token 或稍后再试。`,
             'AUTH_INIT_FAILED'
           );
           return;
@@ -57,21 +60,22 @@ export function registerAuthCommand(program: Command): void {
 
         const response = data as { code: string; authUrl: string };
 
-        // 成功后保存用户提供的 Bearer Token
-        saveBearerToken(bearerToken);
+        // 成功后保存 Token 和授权码
+        saveToken(token);
+        saveAuthCode(response.code);
 
         outputJSON({
           ok: true,
-          message: '授权流程已发起，Bearer Token 已保存到本地配置',
+          message: '授权流程已发起，Token 和授权码已保存到本地配置',
           authCode: response.code,
           authUrl: response.authUrl,
           instructions: [
-            '步骤 1（已完成）: 在 CLI 中执行 init，保存 Bearer Token',
+            '步骤 1（已完成）: 在 CLI 中执行 init，保存 Token 和授权码',
             '步骤 2: 【用户手动操作】在浏览器中访问上面的 authUrl，完成登录授权',
             '步骤 3: 在 CLI 中执行: lbp-growth-calendar auth verify ' + response.code,
           ],
           warning: '步骤 2 必须由用户手动在浏览器中完成，Agent 绝对不能自动调用浏览器或尝试自动化登录流程。',
-          note: `Bearer Token 已保存。后续获取 API Key 后即可访问业务接口。如有问题，${CONTACT_INFO}技术支持。`,
+          note: `Token 和授权码已保存。后续获取 API Key 后即可访问业务接口。如有问题，${CONTACT_INFO}技术支持。`,
         });
       } catch (error) {
         outputError(
@@ -87,13 +91,13 @@ export function registerAuthCommand(program: Command): void {
     .description('用授权码换取 API Key')
     .action(async (code: string) => {
       try {
-        // 获取已保存的 bearer token
-        const bearerToken = getBearerToken();
+        // 获取已保存的 token
+        const token = getToken();
 
-        if (!bearerToken) {
+        if (!token) {
           outputError(
-            `未找到 Bearer Token。请先执行 init 步骤：lbp-growth-calendar auth init --bearer-token <token>。${CONTACT_INFO}获取 Bearer Token。`,
-            'MISSING_BEARER_TOKEN'
+            `未找到 Token。请先执行 init 步骤：lbp-growth-calendar auth init --token <token>。${CONTACT_INFO}获取 Token。`,
+            'MISSING_TOKEN'
           );
           return;
         }
@@ -101,7 +105,7 @@ export function registerAuthCommand(program: Command): void {
         const { status, data } = await apiRequestWithBearer(
           'POST',
           '/openapi/agent-auth/verify',
-          bearerToken,
+          token,
           { code }
         );
 
@@ -153,7 +157,7 @@ export function registerAuthCommand(program: Command): void {
           outputJSON({
             ok: false,
             error: 'AUTH_EXPIRED',
-            message: `授权码已过期。请重新执行：lbp-growth-calendar auth init --bearer-token <token> 获取新的授权码。`,
+            message: `授权码已过期。请重新执行：lbp-growth-calendar auth init --token <token> 获取新的授权码。`,
             status: response.status,
             suggestion: [
               '1. 重新执行 init 获取新的授权码',
@@ -165,18 +169,18 @@ export function registerAuthCommand(program: Command): void {
         }
 
         if (response.status === 'completed' && response.token) {
-          // 保存 API Key（Bearer Token 已在 init 时保存）
+          // 保存 API Key（Token 已在 init 时保存）
           saveApiKey(response.token);
           outputJSON({
             ok: true,
-            message: '授权成功！Bearer Token 和 API Key 都已保存',
+            message: '授权成功！Token 和 API Key 都已保存',
             user: {
               userId: response.userId,
               userName: response.userName,
             },
             expiresAt: response.expiresAt,
             configFile: configFilePath(),
-            note: `两个 Token 已保存：Bearer Token（固定长期有效）+ API Key（动态，过期时间见 expiresAt）。现在可以访问业务接口了。`,
+            note: `两个凭证已保存：Token（固定长期有效）+ API Key（动态，过期时间见 expiresAt）。现在可以访问业务接口了。`,
           });
           return;
         }
@@ -196,18 +200,19 @@ export function registerAuthCommand(program: Command): void {
   // auth status
   auth
     .command('status')
-    .description('查看当前 Token 配置状态')
+    .description('查看当前认证配置状态')
     .action(() => {
-      const bearerToken = getBearerToken();
+      const token = getToken();
       const apiKey = getApiKey();
+      const authCode = getAuthCode();
 
-      if (bearerToken && apiKey) {
+      if (token && apiKey) {
         outputJSON({
           ok: true,
           configured: true,
-          bearerToken: {
+          token: {
             configured: true,
-            preview: `${bearerToken.slice(0, 6)}...${bearerToken.slice(-4)}`,
+            preview: `${token.slice(0, 6)}...${token.slice(-4)}`,
             type: '固定值（长期有效）',
           },
           apiKey: {
@@ -215,25 +220,27 @@ export function registerAuthCommand(program: Command): void {
             preview: `${apiKey.slice(0, 6)}...${apiKey.slice(-4)}`,
             type: '动态值（有过期时间）',
           },
+          authCode: authCode || '已使用或过期',
           message: '授权完成，可以访问所有接口',
           configFile: configFilePath(),
         });
-      } else if (bearerToken && !apiKey) {
+      } else if (token && !apiKey) {
         outputJSON({
           ok: false,
           configured: false,
-          bearerToken: {
+          token: {
             configured: true,
-            preview: `${bearerToken.slice(0, 6)}...${bearerToken.slice(-4)}`,
+            preview: `${token.slice(0, 6)}...${token.slice(-4)}`,
           },
           apiKey: {
             configured: false,
             message: '未完成 verify 步骤',
           },
-          message: `Bearer Token 已配置，但 API Key 未获取。请执行 auth verify <code> 完成授权。`,
+          authCode: authCode || null,
+          message: `Token 已配置，但 API Key 未获取。请执行 auth verify ${authCode || '<code>'} 完成授权。`,
           suggestion: [
             '1. 确认已在浏览器中完成授权',
-            '2. 执行: lbp-growth-calendar auth verify <auth-code>',
+            `2. 执行: lbp-growth-calendar auth verify ${authCode || '<code>'}`,
             `3. 如丢失授权码，需重新执行 init 步骤。${CONTACT_INFO}技术支持`,
           ],
         });
@@ -241,16 +248,17 @@ export function registerAuthCommand(program: Command): void {
         outputJSON({
           ok: false,
           configured: false,
-          bearerToken: { configured: false },
+          token: { configured: false },
           apiKey: { configured: false },
+          authCode: null,
           message: `尚未完成授权配置。`,
           setupInstructions: [
-            '步骤 1: lbp-growth-calendar auth init --bearer-token <token>',
+            '步骤 1: lbp-growth-calendar auth init --token <token>',
             '步骤 2: 在浏览器中访问输出的 authUrl 完成授权',
             '步骤 3: lbp-growth-calendar auth verify <auth-code>',
           ],
           configFile: configFilePath(),
-          note: `${CONTACT_INFO} Bearer Token。`,
+          note: `${CONTACT_INFO} Token。`,
         });
       }
     });
@@ -258,13 +266,13 @@ export function registerAuthCommand(program: Command): void {
   // auth clear
   auth
     .command('clear')
-    .description('清除本地保存的所有 Token')
+    .description('清除本地保存的所有认证信息')
     .action(() => {
-      clearTokens();
+      clearAuth();
       outputJSON({
         ok: true,
-        message: '所有 Token 已清除。如需重新授权，请执行 auth init --bearer-token <token>',
-        note: `如需获取新的 Bearer Token，${CONTACT_INFO}。`,
+        message: '所有认证信息已清除。如需重新授权，请执行 auth init --token <token>',
+        note: `如需获取新的 Token，${CONTACT_INFO}。`,
       });
     });
 }

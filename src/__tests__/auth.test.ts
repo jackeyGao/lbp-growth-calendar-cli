@@ -2,22 +2,27 @@
 jest.mock('../utils/config', () => {
   const store: Record<string, string> = {};
   return {
-    saveBearerToken: jest.fn((t: string) => { store['bearerToken'] = t; }),
-    saveApiKey: jest.fn((t: string) => { store['apiKey'] = t; }),
-    saveTokens: jest.fn((b: string, a: string) => {
-      store['bearerToken'] = b;
-      store['apiKey'] = a;
+    saveAuthCode: jest.fn((c: string) => { store['authCode'] = c; }),
+    saveToken: jest.fn((t: string) => { store['token'] = t; }),
+    saveApiKey: jest.fn((k: string) => { store['apiKey'] = k; }),
+    saveAuth: jest.fn((t: string, k: string) => {
+      store['token'] = t;
+      store['apiKey'] = k;
     }),
-    clearTokens: jest.fn(() => {
-      delete store['bearerToken'];
+    clearAuth: jest.fn(() => {
+      delete store['authCode'];
+      delete store['token'];
       delete store['apiKey'];
     }),
-    getBearerToken: jest.fn(() => store['bearerToken'] || ''),
+    getToken: jest.fn(() => store['token'] || ''),
     getApiKey: jest.fn(() => store['apiKey'] || ''),
+    getAuthCode: jest.fn(() => store['authCode'] || ''),
     isAuthorized: jest.fn(() => !!store['apiKey']),
+    hasToken: jest.fn(() => !!store['token']),
     configFilePath: jest.fn(() => '/mock/.lbp-growth-calendar/config.json'),
     readConfig: jest.fn(() => ({
-      bearerToken: store['bearerToken'],
+      authCode: store['authCode'],
+      token: store['token'],
       apiKey: store['apiKey']
     })),
     writeConfig: jest.fn(),
@@ -36,13 +41,16 @@ jest.mock('../utils/http', () => ({
 }));
 
 import {
-  saveBearerToken,
+  saveAuthCode,
+  saveToken,
   saveApiKey,
-  saveTokens,
-  clearTokens,
-  getBearerToken,
+  saveAuth,
+  clearAuth,
+  getToken,
   getApiKey,
+  getAuthCode,
   isAuthorized,
+  hasToken,
   configFilePath,
 } from '../utils/config';
 import { apiRequestWithBearer, outputJSON } from '../utils/http';
@@ -52,9 +60,14 @@ describe('auth command (unit)', () => {
     jest.clearAllMocks();
   });
 
-  test('saveBearerToken is callable', () => {
-    saveBearerToken('bearer-token-123');
-    expect(saveBearerToken).toHaveBeenCalledWith('bearer-token-123');
+  test('saveAuthCode is callable', () => {
+    saveAuthCode('auth-code-123');
+    expect(saveAuthCode).toHaveBeenCalledWith('auth-code-123');
+  });
+
+  test('saveToken is callable', () => {
+    saveToken('token-123');
+    expect(saveToken).toHaveBeenCalledWith('token-123');
   });
 
   test('saveApiKey is callable', () => {
@@ -62,24 +75,29 @@ describe('auth command (unit)', () => {
     expect(saveApiKey).toHaveBeenCalledWith('api-key-123');
   });
 
-  test('saveTokens saves both tokens', () => {
-    saveTokens('bearer-123', 'api-456');
-    expect(saveTokens).toHaveBeenCalledWith('bearer-123', 'api-456');
+  test('saveAuth saves both token and apiKey', () => {
+    saveAuth('token-123', 'api-key-456');
+    expect(saveAuth).toHaveBeenCalledWith('token-123', 'api-key-456');
   });
 
-  test('getBearerToken returns empty string when not set', () => {
-    (getBearerToken as jest.Mock).mockReturnValueOnce('');
-    expect(getBearerToken()).toBe('');
+  test('getToken returns empty string when not set', () => {
+    (getToken as jest.Mock).mockReturnValueOnce('');
+    expect(getToken()).toBe('');
   });
 
-  test('getBearerToken returns stored token', () => {
-    (getBearerToken as jest.Mock).mockReturnValueOnce('stored-bearer');
-    expect(getBearerToken()).toBe('stored-bearer');
+  test('getToken returns stored token', () => {
+    (getToken as jest.Mock).mockReturnValueOnce('stored-token');
+    expect(getToken()).toBe('stored-token');
   });
 
   test('getApiKey returns empty string when not set', () => {
     (getApiKey as jest.Mock).mockReturnValueOnce('');
     expect(getApiKey()).toBe('');
+  });
+
+  test('getAuthCode returns stored auth code', () => {
+    (getAuthCode as jest.Mock).mockReturnValueOnce('auth-code-123');
+    expect(getAuthCode()).toBe('auth-code-123');
   });
 
   test('isAuthorized returns false when no apiKey', () => {
@@ -92,10 +110,15 @@ describe('auth command (unit)', () => {
     expect(isAuthorized()).toBe(true);
   });
 
-  test('clearTokens removes all tokens', () => {
-    saveTokens('bearer', 'api');
-    clearTokens();
-    expect(clearTokens).toHaveBeenCalled();
+  test('hasToken returns false when no token', () => {
+    (hasToken as jest.Mock).mockReturnValueOnce(false);
+    expect(hasToken()).toBe(false);
+  });
+
+  test('clearAuth removes all auth info', () => {
+    saveAuth('token', 'api');
+    clearAuth();
+    expect(clearAuth).toHaveBeenCalled();
   });
 
   test('configFilePath returns path ending in config.json', () => {
@@ -108,13 +131,13 @@ describe('auth init', () => {
     jest.clearAllMocks();
   });
 
-  test('init requires --bearer-token option', async () => {
+  test('init requires --token option', async () => {
     const { registerAuthCommand } = await import('../commands/auth');
     const { Command } = await import('commander');
     const program = new Command();
     registerAuthCommand(program);
 
-    // 不提供 --bearer-token 应该报错
+    // 不提供 --token 应该报错
     try {
       await program.parseAsync(['node', 'test', 'auth', 'init']);
     } catch (e) {
@@ -123,7 +146,7 @@ describe('auth init', () => {
     }
   });
 
-  test('init with bearer token saves it and returns auth code', async () => {
+  test('init with token saves it and auth code', async () => {
     const mockResponse = {
       code: 'abc123def456',
       authUrl: 'https://example.com/auth?code=abc123def456',
@@ -138,17 +161,18 @@ describe('auth init', () => {
     const program = new Command();
     registerAuthCommand(program);
 
-    await program.parseAsync(['node', 'test', 'auth', 'init', '--bearer-token', 'my-bearer-token']);
+    await program.parseAsync(['node', 'test', 'auth', 'init', '--token', 'my-token']);
 
     expect(apiRequestWithBearer).toHaveBeenCalledWith(
       'POST',
       '/openapi/agent-auth/init',
-      'my-bearer-token'
+      'my-token'
     );
-    expect(saveBearerToken).toHaveBeenCalledWith('my-bearer-token');
+    expect(saveToken).toHaveBeenCalledWith('my-token');
+    expect(saveAuthCode).toHaveBeenCalledWith('abc123def456');
   });
 
-  test('init with invalid bearer token returns 403', async () => {
+  test('init with invalid token returns 403', async () => {
     (apiRequestWithBearer as jest.Mock).mockResolvedValueOnce({
       status: 403,
       data: { message: 'Forbidden' },
@@ -159,10 +183,10 @@ describe('auth init', () => {
     const program = new Command();
     registerAuthCommand(program);
 
-    await program.parseAsync(['node', 'test', 'auth', 'init', '--bearer-token', 'invalid-token']);
+    await program.parseAsync(['node', 'test', 'auth', 'init', '--token', 'invalid-token']);
 
     expect(apiRequestWithBearer).toHaveBeenCalled();
-    expect(saveBearerToken).not.toHaveBeenCalled();
+    expect(saveToken).not.toHaveBeenCalled();
   });
 });
 
@@ -171,8 +195,8 @@ describe('auth verify', () => {
     jest.clearAllMocks();
   });
 
-  test('verify requires bearer token to be saved first', async () => {
-    (getBearerToken as jest.Mock).mockReturnValueOnce('');
+  test('verify requires token to be saved first', async () => {
+    (getToken as jest.Mock).mockReturnValueOnce('');
 
     const { registerAuthCommand } = await import('../commands/auth');
     const { Command } = await import('commander');
@@ -185,7 +209,7 @@ describe('auth verify', () => {
   });
 
   test('verify saves api key on completed status', async () => {
-    (getBearerToken as jest.Mock).mockReturnValueOnce('saved-bearer-token');
+    (getToken as jest.Mock).mockReturnValueOnce('saved-token');
 
     const mockResponse = {
       status: 'completed',
@@ -209,7 +233,7 @@ describe('auth verify', () => {
     expect(apiRequestWithBearer).toHaveBeenCalledWith(
       'POST',
       '/openapi/agent-auth/verify',
-      'saved-bearer-token',
+      'saved-token',
       { code: 'auth-code-123' }
     );
     expect(saveApiKey).toHaveBeenCalledWith('api-key-123');
