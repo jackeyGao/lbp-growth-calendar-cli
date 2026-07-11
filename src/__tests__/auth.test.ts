@@ -32,6 +32,7 @@ jest.mock('../utils/config', () => {
 jest.mock('../utils/http', () => ({
   ...jest.requireActual('../utils/http'),
   apiRequestWithBearer: jest.fn(),
+  apiRequestWithApiKey: jest.fn(),
   outputJSON: jest.fn(),
   outputError: jest.fn((msg: string, code: string) => {
     const { outputJSON } = jest.requireActual('../utils/http');
@@ -53,7 +54,7 @@ import {
   hasToken,
   configFilePath,
 } from '../utils/config';
-import { apiRequestWithBearer, outputJSON } from '../utils/http';
+import { apiRequestWithBearer, apiRequestWithApiKey, outputJSON } from '../utils/http';
 
 describe('auth command (unit)', () => {
   beforeEach(() => {
@@ -237,5 +238,81 @@ describe('auth verify', () => {
       { code: 'auth-code-123' }
     );
     expect(saveApiKey).toHaveBeenCalledWith('api-key-123');
+  });
+
+  test('verify with --api-key validates API key and returns valid status', async () => {
+    const mockResponse = {
+      status: 'valid',
+      userId: 'user123',
+      userName: 'Test User',
+      expiresAt: '2026-07-18T10:30:00.000Z',
+      isAdmin: true,
+    };
+    (apiRequestWithApiKey as jest.Mock).mockResolvedValueOnce({
+      status: 200,
+      data: mockResponse,
+    });
+
+    const { registerAuthCommand } = await import('../commands/auth');
+    const { Command } = await import('commander');
+    const program = new Command();
+    registerAuthCommand(program);
+
+    await program.parseAsync(['node', 'test', 'auth', 'verify', '--api-key', 'test-api-key-123']);
+
+    expect(apiRequestWithApiKey).toHaveBeenCalledWith(
+      'POST',
+      '/openapi/agent-auth/verify',
+      'test-api-key-123'
+    );
+    expect(saveApiKey).not.toHaveBeenCalled();
+  });
+
+  test('verify with --api-key returns invalid status with reason', async () => {
+    const mockResponse = {
+      status: 'invalid',
+      reason: 'Token 已过期',
+    };
+    (apiRequestWithApiKey as jest.Mock).mockResolvedValueOnce({
+      status: 200,
+      data: mockResponse,
+    });
+
+    const { registerAuthCommand } = await import('../commands/auth');
+    const { Command } = await import('commander');
+    const program = new Command();
+    registerAuthCommand(program);
+
+    await program.parseAsync(['node', 'test', 'auth', 'verify', '--api-key', 'expired-api-key']);
+
+    expect(apiRequestWithApiKey).toHaveBeenCalledWith(
+      'POST',
+      '/openapi/agent-auth/verify',
+      'expired-api-key'
+    );
+  });
+
+  test('verify with both code and --api-key returns error', async () => {
+    const { registerAuthCommand } = await import('../commands/auth');
+    const { Command } = await import('commander');
+    const program = new Command();
+    registerAuthCommand(program);
+
+    await program.parseAsync(['node', 'test', 'auth', 'verify', 'some-code', '--api-key', 'some-key']);
+
+    expect(apiRequestWithBearer).not.toHaveBeenCalled();
+    expect(apiRequestWithApiKey).not.toHaveBeenCalled();
+  });
+
+  test('verify without code or --api-key returns error', async () => {
+    const { registerAuthCommand } = await import('../commands/auth');
+    const { Command } = await import('commander');
+    const program = new Command();
+    registerAuthCommand(program);
+
+    await program.parseAsync(['node', 'test', 'auth', 'verify']);
+
+    expect(apiRequestWithBearer).not.toHaveBeenCalled();
+    expect(apiRequestWithApiKey).not.toHaveBeenCalled();
   });
 });

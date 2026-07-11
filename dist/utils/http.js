@@ -7,6 +7,7 @@ exports.BASE_URL = void 0;
 exports.getRequestOptions = getRequestOptions;
 exports.apiRequest = apiRequest;
 exports.apiRequestWithBearer = apiRequestWithBearer;
+exports.apiRequestWithApiKey = apiRequestWithApiKey;
 exports.outputJSON = outputJSON;
 exports.outputSuccess = outputSuccess;
 exports.outputError = outputError;
@@ -152,6 +153,26 @@ async function apiRequestWithBearer(method, path, token, body) {
         }, null, 2));
         process.exit(1);
     }
+    return { status: response.status, data };
+}
+/**
+ * 使用 x-api-key header 调用 API（用于验证 API Key 有效性）
+ */
+async function apiRequestWithApiKey(method, path, apiKey, body) {
+    const url = `${exports.BASE_URL}${path}`;
+    const headers = {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+    };
+    const fetchOptions = {
+        method,
+        headers,
+    };
+    if (body && (method === 'POST' || method === 'PUT')) {
+        fetchOptions.body = JSON.stringify(body);
+    }
+    const response = await (0, node_fetch_1.default)(url, fetchOptions);
+    const data = await response.json();
     return { status: response.status, data };
 }
 function outputJSON(data) {

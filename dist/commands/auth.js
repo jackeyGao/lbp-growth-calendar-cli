@@ -53,80 +53,142 @@ function registerAuthCommand(program) {
             (0, http_1.outputError)(`授权流程异常: ${error instanceof Error ? error.message : String(error)}。${CONTACT_INFO}技术支持。`, 'AUTH_INIT_FAILED');
         }
     });
-    // auth verify <code> - 用 authCode 换取 API Key
+    // auth verify [code] - 用 authCode 换取 API Key，或验证已有 API Key
     auth
-        .command('verify <code>')
-        .description('用授权码换取 API Key')
-        .action(async (code) => {
+        .command('verify [code]')
+        .description('用授权码换取 API Key，或验证已有 API Key 是否有效')
+        .option('--api-key <key>', '要验证的 API Key（与 code 二选一）')
+        .action(async (code, opts) => {
         try {
-            // 获取已保存的 token
-            const token = (0, config_1.getToken)();
-            if (!token) {
-                (0, http_1.outputError)(`未找到 Token。请先执行 init 步骤：lbp-growth-calendar auth init --token <token>。${CONTACT_INFO}获取 Token。`, 'MISSING_TOKEN');
+            // 校验规则：code 和 --api-key 二选一，不能同时传，也不能都不传
+            const hasCode = !!code;
+            const hasApiKeyOption = !!opts.apiKey;
+            if (hasCode && hasApiKeyOption) {
+                (0, http_1.outputError)(`不能同时提供 code 和 --api-key 参数，请选择其中一种方式。`, 'INVALID_PARAMS');
                 return;
             }
-            const { status, data } = await (0, http_1.apiRequestWithBearer)('POST', '/openapi/agent-auth/verify', token, { code });
-            if (status === 404) {
-                (0, http_1.outputError)(`无效的授权码: ${code}。可能原因：1) 授权码已过期；2) 授权码输入错误；3) 用户未在浏览器中完成授权。建议重新执行 init 获取新的授权码。`, 'INVALID_AUTH_CODE');
+            if (!hasCode && !hasApiKeyOption) {
+                (0, http_1.outputError)(`需要提供 code 或 --api-key 参数之一。用法：\n1. auth verify <code> - 用授权码查询授权状态\n2. auth verify --api-key <key> - 验证 API Key 是否有效`, 'MISSING_PARAMS');
                 return;
             }
-            if (status === 401 || status === 403) {
-                // 错误详情由 http.ts 中的 checkAuthError 处理
+            // 模式 1: 携带 code - 用 code 查询授权状态，返回 token 颁发结果
+            if (hasCode) {
+                // 获取已保存的 token
+                const token = (0, config_1.getToken)();
+                if (!token) {
+                    (0, http_1.outputError)(`未找到 Token。请先执行 init 步骤：lbp-growth-calendar auth init --token <token>。${CONTACT_INFO}获取 Token。`, 'MISSING_TOKEN');
+                    return;
+                }
+                const { status, data } = await (0, http_1.apiRequestWithBearer)('POST', '/openapi/agent-auth/verify', token, { code });
+                if (status === 404) {
+                    (0, http_1.outputError)(`无效的授权码: ${code}。可能原因：1) 授权码已过期；2) 授权码输入错误；3) 用户未在浏览器中完成授权。建议重新执行 init 获取新的授权码。`, 'INVALID_AUTH_CODE');
+                    return;
+                }
+                if (status === 401 || status === 403) {
+                    // 错误详情由 http.ts 中的 checkAuthError 处理
+                    return;
+                }
+                if (status !== 200) {
+                    (0, http_1.outputError)(`验证授权码失败: HTTP ${status}。请检查网络连接或 ${CONTACT_INFO}技术支持。`, 'AUTH_VERIFY_FAILED');
+                    return;
+                }
+                const response = data;
+                if (response.status === 'pending') {
+                    (0, http_1.outputJSON)({
+                        ok: false,
+                        error: 'AUTH_PENDING',
+                        message: `用户尚未完成浏览器授权。请在浏览器中访问 auth init 提供的 authUrl 完成授权，然后重新执行 verify。`,
+                        status: response.status,
+                        suggestion: [
+                            '1. 检查浏览器是否已完成授权流程',
+                            '2. 确认使用的是最新的授权码',
+                            `3. 如问题持续，${CONTACT_INFO}技术支持`,
+                        ],
+                    });
+                    return;
+                }
+                if (response.status === 'expired') {
+                    (0, http_1.outputJSON)({
+                        ok: false,
+                        error: 'AUTH_EXPIRED',
+                        message: `授权码已过期。请重新执行：lbp-growth-calendar auth init --token <token> 获取新的授权码。`,
+                        status: response.status,
+                        suggestion: [
+                            '1. 重新执行 init 获取新的授权码',
+                            '2. 在浏览器中尽快完成授权',
+                            `3. 如频繁过期，${CONTACT_INFO}技术支持`,
+                        ],
+                    });
+                    return;
+                }
+                if (response.status === 'completed' && response.token) {
+                    // 保存 API Key（Token 已在 init 时保存）
+                    (0, config_1.saveApiKey)(response.token);
+                    (0, http_1.outputJSON)({
+                        ok: true,
+                        message: '授权成功！Token 和 API Key 都已保存',
+                        user: {
+                            userId: response.userId,
+                            userName: response.userName,
+                        },
+                        expiresAt: response.expiresAt,
+                        configFile: (0, config_1.configFilePath)(),
+                        note: `两个凭证已保存：Token（固定长期有效）+ API Key（动态，过期时间见 expiresAt）。现在可以访问业务接口了。`,
+                    });
+                    return;
+                }
+                (0, http_1.outputError)(`未知的授权状态: ${response.status}。${CONTACT_INFO}技术支持。`, 'UNKNOWN_AUTH_STATUS');
                 return;
             }
-            if (status !== 200) {
-                (0, http_1.outputError)(`验证授权码失败: HTTP ${status}。请检查网络连接或 ${CONTACT_INFO}技术支持。`, 'AUTH_VERIFY_FAILED');
-                return;
+            // 模式 2: 携带 x-api-key - 验证已有 token 是否有效
+            if (hasApiKeyOption) {
+                const apiKey = opts.apiKey;
+                // 调用 verify 接口，只传 x-api-key header，不传 body
+                const { status, data } = await (0, http_1.apiRequestWithApiKey)('POST', '/openapi/agent-auth/verify', apiKey);
+                if (status === 400) {
+                    const response = data;
+                    (0, http_1.outputError)(`请求参数错误: ${response.message || '请检查 API Key 格式'}`, 'BAD_REQUEST');
+                    return;
+                }
+                if (status !== 200) {
+                    (0, http_1.outputError)(`验证 API Key 失败: HTTP ${status}。请检查网络连接或 ${CONTACT_INFO}技术支持。`, 'API_KEY_VERIFY_FAILED');
+                    return;
+                }
+                const response = data;
+                if (response.status === 'valid') {
+                    (0, http_1.outputJSON)({
+                        ok: true,
+                        status: 'valid',
+                        message: 'API Key 有效',
+                        user: {
+                            userId: response.userId,
+                            userName: response.userName,
+                        },
+                        expiresAt: response.expiresAt,
+                        isAdmin: response.isAdmin,
+                    });
+                    return;
+                }
+                if (response.status === 'invalid') {
+                    (0, http_1.outputJSON)({
+                        ok: false,
+                        status: 'invalid',
+                        error: 'API_KEY_INVALID',
+                        message: `API Key 无效: ${response.reason || '未知原因'}`,
+                        reason: response.reason,
+                        suggestion: [
+                            '1. 检查 API Key 是否正确',
+                            '2. 如已过期，请重新执行 auth init -> verify 流程',
+                            `3. 如问题持续，${CONTACT_INFO}技术支持`,
+                        ],
+                    });
+                    return;
+                }
+                (0, http_1.outputError)(`未知的验证状态: ${response.status}。${CONTACT_INFO}技术支持。`, 'UNKNOWN_VERIFY_STATUS');
             }
-            const response = data;
-            if (response.status === 'pending') {
-                (0, http_1.outputJSON)({
-                    ok: false,
-                    error: 'AUTH_PENDING',
-                    message: `用户尚未完成浏览器授权。请在浏览器中访问 auth init 提供的 authUrl 完成授权，然后重新执行 verify。`,
-                    status: response.status,
-                    suggestion: [
-                        '1. 检查浏览器是否已完成授权流程',
-                        '2. 确认使用的是最新的授权码',
-                        `3. 如问题持续，${CONTACT_INFO}技术支持`,
-                    ],
-                });
-                return;
-            }
-            if (response.status === 'expired') {
-                (0, http_1.outputJSON)({
-                    ok: false,
-                    error: 'AUTH_EXPIRED',
-                    message: `授权码已过期。请重新执行：lbp-growth-calendar auth init --token <token> 获取新的授权码。`,
-                    status: response.status,
-                    suggestion: [
-                        '1. 重新执行 init 获取新的授权码',
-                        '2. 在浏览器中尽快完成授权',
-                        `3. 如频繁过期，${CONTACT_INFO}技术支持`,
-                    ],
-                });
-                return;
-            }
-            if (response.status === 'completed' && response.token) {
-                // 保存 API Key（Token 已在 init 时保存）
-                (0, config_1.saveApiKey)(response.token);
-                (0, http_1.outputJSON)({
-                    ok: true,
-                    message: '授权成功！Token 和 API Key 都已保存',
-                    user: {
-                        userId: response.userId,
-                        userName: response.userName,
-                    },
-                    expiresAt: response.expiresAt,
-                    configFile: (0, config_1.configFilePath)(),
-                    note: `两个凭证已保存：Token（固定长期有效）+ API Key（动态，过期时间见 expiresAt）。现在可以访问业务接口了。`,
-                });
-                return;
-            }
-            (0, http_1.outputError)(`未知的授权状态: ${response.status}。${CONTACT_INFO}技术支持。`, 'UNKNOWN_AUTH_STATUS');
         }
         catch (error) {
-            (0, http_1.outputError)(`验证授权码异常: ${error instanceof Error ? error.message : String(error)}。${CONTACT_INFO}技术支持。`, 'AUTH_VERIFY_FAILED');
+            (0, http_1.outputError)(`验证异常: ${error instanceof Error ? error.message : String(error)}。${CONTACT_INFO}技术支持。`, 'AUTH_VERIFY_FAILED');
         }
     });
     // auth status

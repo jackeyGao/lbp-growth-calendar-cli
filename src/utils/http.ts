@@ -181,6 +181,36 @@ export async function apiRequestWithBearer(
   return { status: response.status, data };
 }
 
+/**
+ * 使用 x-api-key header 调用 API（用于验证 API Key 有效性）
+ */
+export async function apiRequestWithApiKey(
+  method: string,
+  path: string,
+  apiKey: string,
+  body?: Record<string, unknown>
+): Promise<{ status: number; data: unknown }> {
+  const url = `${BASE_URL}${path}`;
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'x-api-key': apiKey,
+  };
+
+  const fetchOptions: Record<string, unknown> = {
+    method,
+    headers,
+  };
+
+  if (body && (method === 'POST' || method === 'PUT')) {
+    fetchOptions.body = JSON.stringify(body);
+  }
+
+  const response = await fetch(url, fetchOptions as Parameters<typeof fetch>[1]);
+  const data = await response.json();
+
+  return { status: response.status, data };
+}
+
 export function outputJSON(data: unknown): void {
   console.log(JSON.stringify(data, null, 2));
 }

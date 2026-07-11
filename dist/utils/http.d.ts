@@ -15,6 +15,13 @@ export declare function apiRequestWithBearer(method: string, path: string, token
     status: number;
     data: unknown;
 }>;
+/**
+ * 使用 x-api-key header 调用 API（用于验证 API Key 有效性）
+ */
+export declare function apiRequestWithApiKey(method: string, path: string, apiKey: string, body?: Record<string, unknown>): Promise<{
+    status: number;
+    data: unknown;
+}>;
 export declare function outputJSON(data: unknown): void;
 export declare function outputSuccess(data: unknown): void;
 export declare function outputError(message: string, code?: string, exitCode?: number): never;
