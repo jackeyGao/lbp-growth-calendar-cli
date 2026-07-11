@@ -4,7 +4,9 @@ import { BASE_URL } from '../utils/http';
 jest.mock('node-fetch', () => jest.fn());
 // Mock config
 jest.mock('../utils/config', () => ({
-  getToken: jest.fn(() => 'mock-token'),
+  getBearerToken: jest.fn(() => 'mock-bearer-token'),
+  getApiKey: jest.fn(() => 'mock-api-key'),
+  BUILT_IN_BEARER_TOKEN: '550e8400-e29b-41d4-a716-446655440000',
 }));
 
 import fetch from 'node-fetch';
@@ -20,16 +22,10 @@ describe('http utils', () => {
   });
 
   describe('getRequestOptions', () => {
-    test('reads token from config', () => {
+    test('reads both tokens from config', () => {
       const opts = getRequestOptions();
-      expect(opts.token).toBe('mock-token');
-    });
-
-    test('env var LBP_GROWTH_CALENDAR_TOKEN overrides config', () => {
-      process.env.LBP_GROWTH_CALENDAR_TOKEN = 'env-token';
-      const opts = getRequestOptions();
-      expect(opts.token).toBe('env-token');
-      delete process.env.LBP_GROWTH_CALENDAR_TOKEN;
+      expect(opts.bearerToken).toBe('mock-bearer-token');
+      expect(opts.apiKey).toBe('mock-api-key');
     });
   });
 
@@ -38,22 +34,41 @@ describe('http utils', () => {
       mockFetch.mockReset();
     });
 
-    test('sends GET request with x-api-key header', async () => {
+    test('sends GET request with both Authorization and x-api-key headers', async () => {
       mockFetch.mockResolvedValueOnce({
         status: 200,
         json: async () => ({ items: [] }),
       } as unknown as ReturnType<typeof fetch>);
 
-      const result = await apiRequest('GET', '/openapi/dau', { token: 'test-token' });
+      const result = await apiRequest('GET', '/openapi/dau', {
+        bearerToken: 'bearer-123',
+        apiKey: 'api-456'
+      });
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
       const [url, options] = mockFetch.mock.calls[0];
       expect(url).toBe(`${BASE_URL}/openapi/dau`);
       expect((options as Record<string, unknown>).method).toBe('GET');
-      expect(
-        ((options as Record<string, unknown>).headers as Record<string, string>)['x-api-key']
-      ).toBe('test-token');
+
+      const headers = (options as Record<string, unknown>).headers as Record<string, string>;
+      expect(headers['Authorization']).toBe('Bearer bearer-123');
+      expect(headers['x-api-key']).toBe('api-456');
       expect(result.status).toBe(200);
+    });
+
+    test('sends request with only Authorization when no apiKey', async () => {
+      mockFetch.mockResolvedValueOnce({
+        status: 200,
+        json: async () => ({ items: [] }),
+      } as unknown as ReturnType<typeof fetch>);
+
+      const result = await apiRequest('GET', '/openapi/dau', {
+        bearerToken: 'bearer-123'
+      });
+
+      const headers = ((mockFetch.mock.calls[0][1] as Record<string, unknown>).headers as Record<string, string>);
+      expect(headers['Authorization']).toBe('Bearer bearer-123');
+      expect(headers['x-api-key']).toBeUndefined();
     });
 
     test('sends POST request with body', async () => {
@@ -62,7 +77,10 @@ describe('http utils', () => {
         json: async () => ({ id: 'new-id' }),
       } as unknown as ReturnType<typeof fetch>);
 
-      await apiRequest('POST', '/openapi/events', { token: 'test-token' }, {
+      await apiRequest('POST', '/openapi/events', {
+        bearerToken: 'bearer-123',
+        apiKey: 'api-456'
+      }, {
         date: '2026-07-10',
         eventType: 'activation',
         name: '测试事件',
@@ -87,7 +105,7 @@ describe('http utils', () => {
       });
 
       await expect(
-        apiRequest('GET', '/openapi/dau', { token: 'bad-token' })
+        apiRequest('GET', '/openapi/dau', { bearerToken: 'bad-token' })
       ).rejects.toThrow('process.exit(1)');
 
       mockExit.mockRestore();
@@ -107,7 +125,7 @@ describe('http utils', () => {
       });
 
       await expect(
-        apiRequest('GET', '/openapi/dau', { token: 'valid-token' })
+        apiRequest('GET', '/openapi/dau', { bearerToken: 'valid-token' })
       ).rejects.toThrow('process.exit(1)');
 
       mockExit.mockRestore();
@@ -120,7 +138,7 @@ describe('http utils', () => {
         json: async () => mockData,
       } as unknown as ReturnType<typeof fetch>);
 
-      const result = await apiRequest('GET', '/openapi/dau', { token: 'valid-token' });
+      const result = await apiRequest('GET', '/openapi/dau', { bearerToken: 'valid-token' });
       expect(result.status).toBe(200);
       expect(result.data).toEqual(mockData);
     });
@@ -131,7 +149,7 @@ describe('http utils', () => {
       mockFetch.mockReset();
     });
 
-    test('sends request without x-api-key header', async () => {
+    test('sends request with built-in Bearer token', async () => {
       mockFetch.mockResolvedValueOnce({
         status: 200,
         json: async () => ({ code: 'abc123', authUrl: 'https://example.com/auth' }),
@@ -141,7 +159,9 @@ describe('http utils', () => {
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
       const [, options] = mockFetch.mock.calls[0];
-      expect(((options as Record<string, unknown>).headers as Record<string, string>)['x-api-key']).toBeUndefined();
+      const headers = (options as Record<string, unknown>).headers as Record<string, string>;
+      expect(headers['Authorization']).toBe('Bearer 550e8400-e29b-41d4-a716-446655440000');
+      expect(headers['x-api-key']).toBeUndefined();
       expect(result.status).toBe(200);
     });
 

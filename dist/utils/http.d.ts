@@ -1,6 +1,7 @@
 export declare const BASE_URL = "https://bytedance.aiforce.cloud/app/app_179t4b8e4mv";
 export interface RequestOptions {
-    token: string;
+    bearerToken: string;
+    apiKey?: string;
 }
 export declare function getRequestOptions(): RequestOptions;
 export declare function apiRequest(method: string, path: string, options: RequestOptions, body?: Record<string, unknown>): Promise<{
@@ -8,7 +9,7 @@ export declare function apiRequest(method: string, path: string, options: Reques
     data: unknown;
 }>;
 /**
- * 无需认证的 API 请求（用于 init 和 verify）
+ * 无需 API Key 的 API 请求（用于 init 和 verify，只需要内置 Bearer Token）
  */
 export declare function apiRequestNoAuth(method: string, path: string, body?: Record<string, unknown>): Promise<{
     status: number;

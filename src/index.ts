@@ -12,7 +12,7 @@ program
   .name('lbp-growth-calendar')
   .description('增长日历 CLI 工具 - 管理 DAU 数据、事件与订正\n\nAgent AI Friendly: 所有命令默认输出结构化 JSON，适合程序化调用。\n授权流程：lbp-growth-calendar auth init -> 浏览器授权 -> auth verify <code>')
   .version('2.0.0')
-  .option('--token <token>', '认证 Token（优先级高于本地配置文件）', process.env.LBP_GROWTH_CALENDAR_TOKEN || '');
+  .option('--token <token>', 'API Key（优先级高于本地配置文件，用于覆盖默认的 API Key）');
 
 registerAuthCommand(program);
 registerDauCommand(program);

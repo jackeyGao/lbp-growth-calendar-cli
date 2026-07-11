@@ -9,7 +9,7 @@
 - **AI Friendly 原子操作**：订正接口是全量覆盖语义，CLI 提供 `correct-meta` 与 `correct-event add|update|delete` 自动合并当日数据，避免误删
 - **全量高级模式**：`correct` 命令支持直接传完整 events 列表或 JSON 文件，适合脚本批处理
 - **一致的错误结构**：错误输出 `{ "ok": false, "error": "CODE", "message": "..." }` 且退出码非 0
-- **环境变量支持**：`LBP_GROWTH_CALENDAR_TOKEN`
+- **双 Token 认证**：同时携带内置 Bearer Token 和用户 API Key，确保安全访问
 - **无交互式设计**：所有命令完全非交互式，所有参数通过 CLI 参数或环境变量传入，适合自动化脚本和 AI Agent 调用
 - **自主授权流程**：支持 `init` -> 浏览器授权 -> `verify` 的完整 OAuth 风格授权流程
 

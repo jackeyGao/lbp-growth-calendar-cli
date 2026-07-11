@@ -15,8 +15,9 @@ const node_fetch_1 = __importDefault(require("node-fetch"));
 const config_1 = require("./config");
 exports.BASE_URL = 'https://bytedance.aiforce.cloud/app/app_179t4b8e4mv';
 function getRequestOptions() {
-    const token = process.env.LBP_GROWTH_CALENDAR_TOKEN || (0, config_1.getToken)();
-    return { token };
+    const bearerToken = (0, config_1.getBearerToken)();
+    const apiKey = (0, config_1.getApiKey)();
+    return { bearerToken, apiKey };
 }
 /**
  * 全局检查 API 响应中的认证错误
@@ -53,9 +54,11 @@ async function apiRequest(method, path, options, body) {
     const headers = {
         'Content-Type': 'application/json',
     };
-    // 使用 x-api-key 而不是 Authorization: Bearer
-    if (options.token) {
-        headers['x-api-key'] = options.token;
+    // 始终携带内置的 Bearer Token（用于基础认证）
+    headers['Authorization'] = `Bearer ${options.bearerToken}`;
+    // 如果有 API Key，同时携带 x-api-key（用于业务接口权限）
+    if (options.apiKey) {
+        headers['x-api-key'] = options.apiKey;
     }
     const fetchOptions = {
         method,
@@ -71,13 +74,15 @@ async function apiRequest(method, path, options, body) {
     return { status: response.status, data };
 }
 /**
- * 无需认证的 API 请求（用于 init 和 verify）
+ * 无需 API Key 的 API 请求（用于 init 和 verify，只需要内置 Bearer Token）
  */
 async function apiRequestNoAuth(method, path, body) {
     const url = `${exports.BASE_URL}${path}`;
     const headers = {
         'Content-Type': 'application/json',
     };
+    // init 和 verify 只需要内置的 Bearer Token
+    headers['Authorization'] = `Bearer ${config_1.BUILT_IN_BEARER_TOKEN}`;
     const fetchOptions = {
         method,
         headers,

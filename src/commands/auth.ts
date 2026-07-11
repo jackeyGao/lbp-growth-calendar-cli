@@ -1,5 +1,15 @@
 import { Command } from 'commander';
-import { saveToken, clearToken, getToken, configFilePath } from '../utils/config';
+import {
+  saveBearerToken,
+  saveApiKey,
+  saveTokens,
+  clearTokens,
+  getBearerToken,
+  getApiKey,
+  isAuthorized,
+  configFilePath,
+  BUILT_IN_BEARER_TOKEN
+} from '../utils/config';
 import { outputJSON, outputError, apiRequestNoAuth } from '../utils/http';
 
 export function registerAuthCommand(program: Command): void {
@@ -7,12 +17,15 @@ export function registerAuthCommand(program: Command): void {
     .command('auth')
     .description('认证管理（Token 配置）');
 
-  // auth init - 发起授权流程
+  // auth init - 发起授权流程，同时保存内置 Bearer Token
   auth
     .command('init')
     .description('发起授权流程，获取授权码和授权链接')
     .action(async () => {
       try {
+        // 先保存内置的 Bearer Token
+        saveBearerToken(BUILT_IN_BEARER_TOKEN);
+
         const { status, data } = await apiRequestNoAuth('POST', '/openapi/agent-auth/init');
 
         if (status !== 200) {
@@ -23,7 +36,7 @@ export function registerAuthCommand(program: Command): void {
         const response = data as { code: string; authUrl: string };
         outputJSON({
           ok: true,
-          message: '授权流程已发起',
+          message: '授权流程已发起，内置 Bearer Token 已保存',
           authCode: response.code,
           authUrl: response.authUrl,
           instructions: [
@@ -40,10 +53,10 @@ export function registerAuthCommand(program: Command): void {
       }
     });
 
-  // auth verify <code> - 用 authCode 换取 token
+  // auth verify <code> - 用 authCode 换取 API Key
   auth
     .command('verify <code>')
-    .description('用授权码换取 token')
+    .description('用授权码换取 API Key')
     .action(async (code: string) => {
       try {
         const { status, data } = await apiRequestNoAuth('POST', '/openapi/agent-auth/verify', { code });
@@ -87,10 +100,11 @@ export function registerAuthCommand(program: Command): void {
         }
 
         if (response.status === 'completed' && response.token) {
-          saveToken(response.token);
+          // 同时保存内置 Bearer Token 和 API Key
+          saveTokens(BUILT_IN_BEARER_TOKEN, response.token);
           outputJSON({
             ok: true,
-            message: '授权成功，Token 已保存',
+            message: '授权成功，Bearer Token 和 API Key 已保存',
             user: {
               userId: response.userId,
               userName: response.userName,
@@ -115,19 +129,23 @@ export function registerAuthCommand(program: Command): void {
     .command('status')
     .description('查看当前 Token 配置状态')
     .action(() => {
-      const token = getToken();
-      if (token) {
+      const bearerToken = getBearerToken();
+      const apiKey = getApiKey();
+      const authorized = isAuthorized();
+
+      if (authorized) {
         outputJSON({
           ok: true,
           configured: true,
-          tokenPreview: `${token.slice(0, 6)}...${token.slice(-4)}`,
+          bearerTokenPreview: `${bearerToken.slice(0, 6)}...${bearerToken.slice(-4)}`,
+          apiKeyPreview: `${apiKey.slice(0, 6)}...${apiKey.slice(-4)}`,
           configFile: configFilePath(),
         });
       } else {
         outputJSON({
           ok: false,
           configured: false,
-          message: '尚未配置 Token，请执行授权流程：\n  1. lbp-growth-calendar auth init\n  2. 在浏览器中完成授权\n  3. lbp-growth-calendar auth verify <auth-code>',
+          message: '尚未完成授权，请执行授权流程：\n  1. lbp-growth-calendar auth init\n  2. 在浏览器中完成授权\n  3. lbp-growth-calendar auth verify <auth-code>',
           configFile: configFilePath(),
         });
       }
@@ -136,9 +154,9 @@ export function registerAuthCommand(program: Command): void {
   // auth clear
   auth
     .command('clear')
-    .description('清除本地保存的 Token')
+    .description('清除本地保存的所有 Token')
     .action(() => {
-      clearToken();
-      outputJSON({ ok: true, message: 'Token 已清除' });
+      clearTokens();
+      outputJSON({ ok: true, message: '所有 Token 已清除' });
     });
 }
