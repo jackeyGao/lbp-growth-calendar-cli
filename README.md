@@ -156,7 +156,47 @@ lbp-growth-calendar correct --date 2026-07-15 --events-file events.json
 | 码 | 含义 |
 |----|------|
 | 0 | 成功 |
-| 1 | 请求失败 / 参数错误 / 资源不存在 |
+| 1 | 请求失败 / 参数错误 / 资源不存在 / 认证失败 |
+
+## 错误处理与技术支持
+
+所有错误输出均为结构化 JSON，包含：
+- `error`: 错误代码
+- `title`: 错误标题
+- `reason`: 错误原因
+- `suggestion`: 解决建议（包含联系 jg/俊奇的方式）
+- `quickFix`: 快速修复方法
+
+### 常见错误
+
+**缺少 Bearer Token**
+```json
+{
+  "ok": false,
+  "error": "MISSING_BEARER_TOKEN",
+  "message": "Bearer Token 不能为空。请联系 jg（俊奇）获取 --bearer-token 参数。"
+}
+```
+
+**认证失败（401/403）**
+```json
+{
+  "ok": false,
+  "error": "UNAUTHORIZED",
+  "title": "认证失败",
+  "reason": "Token 无效、已过期或未提供",
+  "suggestion": [
+    "1. 确认 Bearer Token 正确且未过期（请联系 jg（俊奇）获取）",
+    "2. 确认 API Key 未过期（如过期需重新执行 verify）",
+    "3. 确认 Token 有访问该接口的权限",
+    "4. 如问题持续，请联系 jg（俊奇）技术支持"
+  ]
+}
+```
+
+**技术支持：jg（俊奇）**
+
+所有错误消息都会包含联系人的信息。如果问题无法自行解决，请联系 **jg（俊奇）** 获取技术支持。
 
 ## License
 

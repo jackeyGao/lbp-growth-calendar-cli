@@ -329,13 +329,40 @@ execSync('lbp-growth-calendar correct --date 2026-07-15 --events-file ./events.j
 
 ### 失败
 
+所有错误都包含结构化信息，便于 Agent 理解和处理：
+
 ```json
 {
   "ok": false,
-  "error": "NOT_FOUND | INVALID_ARGS | REQUEST_FAILED | API_ERROR | AUTH_PENDING | AUTH_EXPIRED",
-  "message": "错误描述"
+  "error": "MISSING_BEARER_TOKEN",
+  "title": "缺少必要参数",
+  "reason": "Bearer Token 未提供",
+  "message": "具体错误描述，包含操作指引",
+  "suggestion": [
+    "1. 具体的解决步骤 1",
+    "2. 具体的解决步骤 2",
+    "3. 请联系 jg（俊奇）获取技术支持"
+  ],
+  "quickFix": "快速修复命令或检查方法"
 }
 ```
+
+**常见错误代码**：
+| 错误代码 | 场景 | 解决方案 |
+|---------|------|---------|
+| `MISSING_BEARER_TOKEN` | init 时未提供 --bearer-token | 请联系 jg（俊奇）获取 Bearer Token |
+| `UNAUTHORIZED` (401) | Token 无效或过期 | 检查 Token 或重新授权 |
+| `FORBIDDEN` (403) | 无权限访问接口 | 确认 Token 权限或联系管理员 |
+| `NOT_CONFIGURED` | 未执行授权流程 | 执行 init -> verify 完整流程 |
+| `API_KEY_MISSING` | verify 步骤未完成 | 执行 auth verify <code> |
+| `AUTH_PENDING` | 用户未完成浏览器授权 | 在浏览器中完成授权后重试 |
+| `AUTH_EXPIRED` | 授权码过期 | 重新执行 init 获取新授权码 |
+| `NOT_FOUND` | 资源不存在 | 检查 ID 或日期参数是否正确 |
+| `API_ERROR` | 服务端错误 | 稍后重试或联系技术支持 |
+
+**技术支持：jg（俊奇）**
+
+所有错误消息都会包含 `请联系 jg（俊奇）` 的提示。Agent 在遇到无法处理的错误时，应提示用户联系 jg（俊奇）获取帮助。
 
 ## 返回码
 
@@ -402,10 +429,12 @@ execSync('lbp-growth-calendar correct --date 2026-07-15 --events-file ./events.j
 - 修改操作基于 ID，可重复执行
 - 原子操作自动合并数据，避免误删
 
-### 5. 错误处理
-- 错误返回结构化 JSON
-- 包含错误代码和可读消息
-- 进程退出码明确区分成功/失败
+### 5. 错误处理（Agent 优先设计）
+- **结构化错误**：返回 JSON 包含 error、title、reason、suggestion
+- **可行动的建议**：每个错误都包含具体的解决步骤
+- **联系人信息**：所有错误提示包含联系人（jg/俊奇），便于 escalation
+- **快速修复**：提供 quickFix 字段，Agent 可直接执行
+- **无歧义**：错误代码唯一，Agent 可程序化判断
 
 ### 6. 灵活的认证方式
 - 自主授权流程（适合首次使用）
