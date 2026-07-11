@@ -31,11 +31,14 @@ npm install -g lbp-growth-calendar
 # 步骤 1: 提供 Bearer Token，发起授权流程
 lbp-growth-calendar auth init --bearer-token <your-bearer-token>
 
-# 步骤 2: 在浏览器中访问输出的 authUrl，完成登录授权
+# 步骤 2: 【用户手动操作】在浏览器中访问输出的 authUrl，完成登录授权
+# ⚠️ 注意：此步骤必须由用户手动完成，Agent 绝对不能自动调用浏览器！
 
 # 步骤 3: 使用授权码换取 API Key
 lbp-growth-calendar auth verify <auth-code>
 ```
+
+**⚠️ 安全警告**：步骤 2 的浏览器授权涉及用户登录和敏感操作，必须由用户本人在浏览器中手动完成。Agent/自动化脚本严禁尝试自动打开浏览器或模拟登录流程。
 
 ### 2. 验证配置
 

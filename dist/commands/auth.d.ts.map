@@ -1,1 +1,1 @@
-{"version":3,"file":"auth.d.ts","sourceRoot":"","sources":["../../src/commands/auth.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,OAAO,EAAE,MAAM,WAAW,CAAC;AAepC,wBAAgB,mBAAmB,CAAC,OAAO,EAAE,OAAO,GAAG,IAAI,CA6P1D"}
+{"version":3,"file":"auth.d.ts","sourceRoot":"","sources":["../../src/commands/auth.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,OAAO,EAAE,MAAM,WAAW,CAAC;AAepC,wBAAgB,mBAAmB,CAAC,OAAO,EAAE,OAAO,GAAG,IAAI,CA8P1D"}

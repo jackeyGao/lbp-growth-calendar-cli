@@ -67,9 +67,10 @@ export function registerAuthCommand(program: Command): void {
           authUrl: response.authUrl,
           instructions: [
             '步骤 1（已完成）: 在 CLI 中执行 init，保存 Bearer Token',
-            '步骤 2: 在浏览器中访问上面的 authUrl，完成登录授权',
+            '步骤 2: 【用户手动操作】在浏览器中访问上面的 authUrl，完成登录授权',
             '步骤 3: 在 CLI 中执行: lbp-growth-calendar auth verify ' + response.code,
           ],
+          warning: '步骤 2 必须由用户手动在浏览器中完成，Agent 绝对不能自动调用浏览器或尝试自动化登录流程。',
           note: `Bearer Token 已保存。后续获取 API Key 后即可访问业务接口。如有问题，${CONTACT_INFO}技术支持。`,
         });
       } catch (error) {

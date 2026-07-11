@@ -66,9 +66,20 @@ lbp-growth-calendar auth init --bearer-token <your-bearer-token>
 }
 ```
 
-### 步骤 2：浏览器授权
+### 步骤 2：浏览器授权（⚠️ 必须由用户手动完成）
 
-在浏览器中访问 `authUrl`，完成登录授权。
+**🚨 重要安全警告：此步骤必须由用户手动在浏览器中完成，Agent 绝对不能自动调用浏览器或尝试自动化登录授权流程。**
+
+用户需要在浏览器中访问 `authUrl`，完成登录和授权。Agent 应该：
+1. 向用户显示 `authUrl` 链接
+2. 明确告知用户需要手动访问该链接
+3. 等待用户完成授权后，再执行步骤 3 的 verify 命令
+
+**Agent 严禁**：
+- 自动打开浏览器
+- 尝试模拟登录流程
+- 尝试自动填充用户名密码
+- 任何自动化浏览器操作
 
 ### 步骤 3：换取 Token
 
@@ -269,7 +280,9 @@ const initRes = JSON.parse(
 );
 console.log('请在浏览器中访问:', initRes.authUrl);
 
-// 步骤 2: 等待用户在浏览器中完成授权（这里需要人工介入或自动化浏览器操作）
+// ⚠️ 步骤 2: 【用户手动操作】等待用户在浏览器中访问 authUrl 并完成授权
+// Agent 绝对不能自动调用浏览器或尝试自动化登录流程！
+// 正确做法：向用户显示 authUrl，等待用户确认已完成授权
 
 // 步骤 3: 用授权码换取 API Key
 const verifyRes = JSON.parse(
@@ -418,11 +431,16 @@ execSync('lbp-growth-calendar correct --date 2026-07-15 --events-file ./events.j
 - 统一结构：`{ ok: boolean, data?: any, error?: string, message?: string }`
 - 成功时返回码 0，失败时返回码非 0
 
-### 3. 自主授权流程
+### 3. 自主授权流程（含安全约束）
 - 支持完整的 OAuth 风格授权流程
 - `init` 获取授权码和链接
 - `verify` 换取 Token
 - 无需人工联系管理员申请 Token
+
+**⚠️ 重要安全约束**：
+- **浏览器授权步骤必须由用户手动完成**（步骤 2）
+- Agent **严禁** 自动调用浏览器、模拟登录、或自动化任何用户认证流程
+- Agent 应该向用户显示 `authUrl`，然后等待用户确认已完成授权
 
 ### 4. 幂等设计
 - GET 查询操作天然幂等
