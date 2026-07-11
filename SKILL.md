@@ -37,26 +37,32 @@ npm install -g lbp-growth-calendar
 
 ## 授权流程（获取 Token）
 
-CLI 支持完整的 OAuth 风格授权流程，无需联系管理员申请 Token。
+CLI 使用双 Token 认证机制：
 
-### 步骤 1：发起授权
+| Token 类型 | 获取方式 | 有效期 | 用途 |
+|-----------|---------|--------|------|
+| **Bearer Token** | 从管理员获取 | 长期有效 | 访问 init/verify 接口 |
+| **API Key** | 通过 verify 获取 | 有过期时间 | 访问业务接口（DAU、Events 等） |
+
+### 步骤 1：提供 Bearer Token，发起授权
 
 ```bash
-lbp-growth-calendar auth init
+lbp-growth-calendar auth init --bearer-token <your-bearer-token>
 ```
 
 输出示例：
 ```json
 {
   "ok": true,
-  "message": "授权流程已发起",
+  "message": "授权流程已发起，Bearer Token 已保存到本地配置",
   "authCode": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6",
   "authUrl": "https://bytedance.aiforce.cloud/app/app_179t4b8e4mv/agent-auth?code=a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6",
   "instructions": [
     "1. 在浏览器中访问上面的 authUrl",
     "2. 完成登录授权",
     "3. 执行: lbp-growth-calendar auth verify a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6"
-  ]
+  ],
+  "note": "Bearer Token 和后续获取的 API Key 都已保存到本地，后续命令会自动使用"
 }
 ```
 
@@ -90,22 +96,22 @@ lbp-growth-calendar auth verify <auth-code>
 lbp-growth-calendar auth status
 ```
 
-## 配置 Token（任选其一）
-
-### 方式一：环境变量（推荐用于 CI/CD）
-
-```bash
-export LBP_GROWTH_CALENDAR_TOKEN="your_token_here"
-```
-
-### 方式二：本地配置文件（推荐用于本地开发）
-
-通过上面的 `auth init` 和 `auth verify` 流程自动保存。
-
-### 方式三：命令行参数
-
-```bash
-lbp-growth-calendar --token <your-token> dau list --start-date 2026-07-01
+输出示例（已完成授权）：
+```json
+{
+  "ok": true,
+  "configured": true,
+  "bearerToken": {
+    "configured": true,
+    "preview": "550e84...400000",
+    "type": "固定值（长期有效）"
+  },
+  "apiKey": {
+    "configured": true,
+    "preview": "a1b2c3...d4e5f6",
+    "type": "动态值（有过期时间）"
+  }
+}
 ```
 
 ## 使用示例
@@ -208,10 +214,12 @@ lbp-growth-calendar correct --date 2026-07-15 \
 
 | 命令 | 说明 | AI/Agent 友好 |
 |------|------|---------------|
-| `auth init` | 发起授权流程，获取授权码和授权链接 | ✅ 非交互式 |
-| `auth verify <code>` | 用授权码换取 Token 并保存 | ✅ 非交互式 |
+| `auth init --bearer-token <token>` | 提供 Bearer Token，发起授权流程 | ✅ 非交互式 |
+| `auth verify <code>` | 用授权码换取 API Key | ✅ 非交互式 |
 | `auth status` | 查看当前 Token 配置状态 | ✅ 输出结构化 JSON |
-| `auth clear` | 清除本地保存的 Token | ✅ 非交互式 |
+| `auth clear` | 清除本地保存的所有 Token | ✅ 非交互式 |
+
+**注意**：`--bearer-token` 是 init 命令的**必需参数**，需要从管理员获取。
 
 ### DAU 命令
 
@@ -241,11 +249,12 @@ lbp-growth-calendar correct --date 2026-07-15 \
 
 ### 全局选项
 
-| 选项 | 说明 |
-|------|------|
-| `--token <token>` | Bearer Token（可用 `LBP_GROWTH_CALENDAR_TOKEN` 环境变量，优先级高于配置文件） |
+本 CLI 不需要全局选项。所有认证通过 `auth` 命令管理：
+- `auth init --bearer-token <token>` 设置 Bearer Token
+- `auth verify <code>` 获取 API Key
+- 后续命令自动从配置文件读取两个 Token
 
-> **注意**：API 基础地址已内置，无需配置。如需覆盖，可设置 `LBP_GROWTH_CALENDAR_BASE_URL` 环境变量。
+> **注意**：API 基础地址已内置，无需配置。
 
 ## Agent 使用示例
 
@@ -253,20 +262,23 @@ lbp-growth-calendar correct --date 2026-07-15 \
 const { execSync } = require('child_process');
 
 // ========== 自主授权流程 ==========
-// 步骤 1: 发起授权
-const initRes = JSON.parse(execSync('lbp-growth-calendar auth init', { encoding: 'utf8' }));
+// 步骤 1: 提供 Bearer Token，发起授权
+const BEARER_TOKEN = '从管理员获取的 Bearer Token';
+const initRes = JSON.parse(
+  execSync(`lbp-growth-calendar auth init --bearer-token ${BEARER_TOKEN}`, { encoding: 'utf8' })
+);
 console.log('请在浏览器中访问:', initRes.authUrl);
 
 // 步骤 2: 等待用户在浏览器中完成授权（这里需要人工介入或自动化浏览器操作）
 
-// 步骤 3: 用授权码换取 Token
-const verifyRes = JSON.parse(execSync(`lbp-growth-calendar auth verify ${initRes.authCode}`, { encoding: 'utf8' }));
+// 步骤 3: 用授权码换取 API Key
+const verifyRes = JSON.parse(
+  execSync(`lbp-growth-calendar auth verify ${initRes.authCode}`, { encoding: 'utf8' })
+);
 if (verifyRes.ok) {
   console.log('授权成功，用户:', verifyRes.user.userName);
+  console.log('API Key 过期时间:', verifyRes.expiresAt);
 }
-
-// ========== 或使用环境变量（适合 CI/CD）==========
-process.env.LBP_GROWTH_CALENDAR_TOKEN = 'your_token_here';
 
 // 验证 Token 配置
 const status = JSON.parse(execSync('lbp-growth-calendar auth status', { encoding: 'utf8' }));

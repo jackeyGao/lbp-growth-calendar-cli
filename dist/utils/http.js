@@ -6,7 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.BASE_URL = void 0;
 exports.getRequestOptions = getRequestOptions;
 exports.apiRequest = apiRequest;
-exports.apiRequestNoAuth = apiRequestNoAuth;
+exports.apiRequestWithBearer = apiRequestWithBearer;
 exports.outputJSON = outputJSON;
 exports.outputSuccess = outputSuccess;
 exports.outputError = outputError;
@@ -24,29 +24,25 @@ function getRequestOptions() {
  * - token 失效或无效
  * - 未配置 token
  */
-function checkAuthError(data) {
-    if (data && typeof data === 'object') {
+function checkAuthError(data, status) {
+    // 401/403 错误处理
+    if (status === 401 || status === 403) {
         const d = data;
-        const statusCode = d.statusCode;
-        const message = d.message || '';
-        // 401 未授权或 token 无效
-        if (statusCode === 401) {
-            console.error(JSON.stringify({
-                ok: false,
-                error: 'TOKEN_INVALID',
-                message: 'Token 已失效或未授权，请重新执行授权流程：\n  1. lbp-growth-calendar auth init\n  2. 在浏览器中完成授权\n  3. lbp-growth-calendar auth verify <auth-code>',
-            }, null, 2));
-            process.exit(1);
-        }
-        // 403 禁止访问
-        if (statusCode === 403) {
-            console.error(JSON.stringify({
-                ok: false,
-                error: 'FORBIDDEN',
-                message: '没有权限访问该资源',
-            }, null, 2));
-            process.exit(1);
-        }
+        const message = d?.message || '';
+        console.error(JSON.stringify({
+            ok: false,
+            error: status === 401 ? 'UNAUTHORIZED' : 'FORBIDDEN',
+            message: status === 401
+                ? '认证失败：Token 无效或已过期。请检查 bearer token 是否正确，并重新执行授权流程。'
+                : '禁止访问：没有权限调用此接口。请确认 bearer token 有权限访问 init/verify 接口。',
+            details: message,
+            suggestion: [
+                '1. 确认 bearer token 正确：lbp-growth-calendar auth init --bearer-token <your-token>',
+                '2. 重新执行授权流程',
+                '3. 联系管理员确认 token 权限',
+            ],
+        }, null, 2));
+        process.exit(1);
     }
 }
 async function apiRequest(method, path, options, body) {
@@ -54,7 +50,7 @@ async function apiRequest(method, path, options, body) {
     const headers = {
         'Content-Type': 'application/json',
     };
-    // 始终携带内置的 Bearer Token（用于基础认证）
+    // 始终携带 Bearer Token（用于基础认证）
     headers['Authorization'] = `Bearer ${options.bearerToken}`;
     // 如果有 API Key，同时携带 x-api-key（用于业务接口权限）
     if (options.apiKey) {
@@ -70,19 +66,18 @@ async function apiRequest(method, path, options, body) {
     const response = await (0, node_fetch_1.default)(url, fetchOptions);
     const data = await response.json();
     // 全局认证错误拦截
-    checkAuthError(data);
+    checkAuthError(data, response.status);
     return { status: response.status, data };
 }
 /**
- * 无需 API Key 的 API 请求（用于 init 和 verify，只需要内置 Bearer Token）
+ * 使用指定 Bearer Token 调用 API（用于 init 和 verify）
  */
-async function apiRequestNoAuth(method, path, body) {
+async function apiRequestWithBearer(method, path, bearerToken, body) {
     const url = `${exports.BASE_URL}${path}`;
     const headers = {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${bearerToken}`,
     };
-    // init 和 verify 只需要内置的 Bearer Token
-    headers['Authorization'] = `Bearer ${config_1.BUILT_IN_BEARER_TOKEN}`;
     const fetchOptions = {
         method,
         headers,
@@ -92,6 +87,8 @@ async function apiRequestNoAuth(method, path, body) {
     }
     const response = await (0, node_fetch_1.default)(url, fetchOptions);
     const data = await response.json();
+    // 检查认证错误
+    checkAuthError(data, response.status);
     return { status: response.status, data };
 }
 function outputJSON(data) {

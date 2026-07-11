@@ -33,7 +33,6 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.BUILT_IN_BEARER_TOKEN = void 0;
 exports.readConfig = readConfig;
 exports.writeConfig = writeConfig;
 exports.saveBearerToken = saveBearerToken;
@@ -43,14 +42,13 @@ exports.clearTokens = clearTokens;
 exports.getBearerToken = getBearerToken;
 exports.getApiKey = getApiKey;
 exports.isAuthorized = isAuthorized;
+exports.hasBearerToken = hasBearerToken;
 exports.configFilePath = configFilePath;
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 const os = __importStar(require("os"));
 const CONFIG_DIR = path.join(os.homedir(), '.lbp-growth-calendar');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
-// 内置的 Bearer Token，用于访问 init 和 verify 接口
-exports.BUILT_IN_BEARER_TOKEN = '550e8400-e29b-41d4-a716-446655440000';
 function readConfig() {
     try {
         if (!fs.existsSync(CONFIG_FILE))
@@ -69,7 +67,7 @@ function writeConfig(config) {
     fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2), 'utf8');
 }
 /**
- * 保存 Bearer Token（内置 token）
+ * 保存 Bearer Token（用户提供）
  */
 function saveBearerToken(token) {
     const config = readConfig();
@@ -103,11 +101,11 @@ function clearTokens() {
     writeConfig(config);
 }
 /**
- * 获取 Bearer Token（优先从配置读取，否则返回内置 token）
+ * 获取 Bearer Token
  */
 function getBearerToken() {
     const config = readConfig();
-    return config.bearerToken || exports.BUILT_IN_BEARER_TOKEN;
+    return config.bearerToken || '';
 }
 /**
  * 获取 API Key
@@ -122,6 +120,13 @@ function getApiKey() {
 function isAuthorized() {
     const config = readConfig();
     return !!config.apiKey;
+}
+/**
+ * 检查是否有 Bearer Token
+ */
+function hasBearerToken() {
+    const config = readConfig();
+    return !!config.bearerToken;
 }
 function configFilePath() {
     return CONFIG_FILE;

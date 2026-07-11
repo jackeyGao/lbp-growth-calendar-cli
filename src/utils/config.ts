@@ -5,11 +5,8 @@ import * as os from 'os';
 const CONFIG_DIR = path.join(os.homedir(), '.lbp-growth-calendar');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 
-// 内置的 Bearer Token，用于访问 init 和 verify 接口
-export const BUILT_IN_BEARER_TOKEN = '550e8400-e29b-41d4-a716-446655440000';
-
 export interface Config {
-  bearerToken?: string;  // 内置 Bearer Token（用于所有请求的基础认证）
+  bearerToken?: string;  // 用户提供的 Bearer Token（用于基础认证）
   apiKey?: string;       // 用户通过 verify 获取的 API Key（用于业务接口）
 }
 
@@ -31,7 +28,7 @@ export function writeConfig(config: Config): void {
 }
 
 /**
- * 保存 Bearer Token（内置 token）
+ * 保存 Bearer Token（用户提供）
  */
 export function saveBearerToken(token: string): void {
   const config = readConfig();
@@ -69,11 +66,11 @@ export function clearTokens(): void {
 }
 
 /**
- * 获取 Bearer Token（优先从配置读取，否则返回内置 token）
+ * 获取 Bearer Token
  */
 export function getBearerToken(): string {
   const config = readConfig();
-  return config.bearerToken || BUILT_IN_BEARER_TOKEN;
+  return config.bearerToken || '';
 }
 
 /**
@@ -90,6 +87,14 @@ export function getApiKey(): string {
 export function isAuthorized(): boolean {
   const config = readConfig();
   return !!config.apiKey;
+}
+
+/**
+ * 检查是否有 Bearer Token
+ */
+export function hasBearerToken(): boolean {
+  const config = readConfig();
+  return !!config.bearerToken;
 }
 
 export function configFilePath(): string {

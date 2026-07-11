@@ -9,9 +9,9 @@ export declare function apiRequest(method: string, path: string, options: Reques
     data: unknown;
 }>;
 /**
- * 无需 API Key 的 API 请求（用于 init 和 verify，只需要内置 Bearer Token）
+ * 使用指定 Bearer Token 调用 API（用于 init 和 verify）
  */
-export declare function apiRequestNoAuth(method: string, path: string, body?: Record<string, unknown>): Promise<{
+export declare function apiRequestWithBearer(method: string, path: string, bearerToken: string, body?: Record<string, unknown>): Promise<{
     status: number;
     data: unknown;
 }>;

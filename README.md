@@ -23,13 +23,17 @@ npm install -g lbp-growth-calendar
 
 ### 1. 授权流程（获取 Token）
 
+需要两个 Token：
+- **Bearer Token**（固定，长期有效）：从管理员获取，用于访问 init/verify 接口
+- **API Key**（动态，有过期时间）：通过 verify 获取，用于访问业务接口
+
 ```bash
-# 步骤 1: 发起授权，获取授权码和授权链接
-lbp-growth-calendar auth init
+# 步骤 1: 提供 Bearer Token，发起授权流程
+lbp-growth-calendar auth init --bearer-token <your-bearer-token>
 
 # 步骤 2: 在浏览器中访问输出的 authUrl，完成登录授权
 
-# 步骤 3: 使用授权码换取 Token
+# 步骤 3: 使用授权码换取 API Key
 lbp-growth-calendar auth verify <auth-code>
 ```
 

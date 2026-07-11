@@ -6,11 +6,10 @@ jest.mock('node-fetch', () => jest.fn());
 jest.mock('../utils/config', () => ({
   getBearerToken: jest.fn(() => 'mock-bearer-token'),
   getApiKey: jest.fn(() => 'mock-api-key'),
-  BUILT_IN_BEARER_TOKEN: '550e8400-e29b-41d4-a716-446655440000',
 }));
 
 import fetch from 'node-fetch';
-import { apiRequest, apiRequestNoAuth, getRequestOptions, outputSuccess, outputError } from '../utils/http';
+import { apiRequest, apiRequestWithBearer, getRequestOptions, outputSuccess, outputError } from '../utils/http';
 
 const mockFetch = fetch as jest.MockedFunction<typeof fetch>;
 
@@ -91,7 +90,7 @@ describe('http utils', () => {
       expect((options as Record<string, unknown>).body).toContain('测试事件');
     });
 
-    test('exits process on 401 TOKEN_INVALID error', async () => {
+    test('exits process on 401 UNAUTHORIZED error', async () => {
       mockFetch.mockResolvedValueOnce({
         status: 401,
         json: async () => ({
@@ -144,23 +143,23 @@ describe('http utils', () => {
     });
   });
 
-  describe('apiRequestNoAuth', () => {
+  describe('apiRequestWithBearer', () => {
     beforeEach(() => {
       mockFetch.mockReset();
     });
 
-    test('sends request with built-in Bearer token', async () => {
+    test('sends request with specified Bearer token', async () => {
       mockFetch.mockResolvedValueOnce({
         status: 200,
         json: async () => ({ code: 'abc123', authUrl: 'https://example.com/auth' }),
       } as unknown as ReturnType<typeof fetch>);
 
-      const result = await apiRequestNoAuth('POST', '/openapi/agent-auth/init');
+      const result = await apiRequestWithBearer('POST', '/openapi/agent-auth/init', 'my-bearer-token');
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
       const [, options] = mockFetch.mock.calls[0];
       const headers = (options as Record<string, unknown>).headers as Record<string, string>;
-      expect(headers['Authorization']).toBe('Bearer 550e8400-e29b-41d4-a716-446655440000');
+      expect(headers['Authorization']).toBe('Bearer my-bearer-token');
       expect(headers['x-api-key']).toBeUndefined();
       expect(result.status).toBe(200);
     });
@@ -171,10 +170,30 @@ describe('http utils', () => {
         json: async () => ({ status: 'completed', token: 'new-token' }),
       } as unknown as ReturnType<typeof fetch>);
 
-      await apiRequestNoAuth('POST', '/openapi/agent-auth/verify', { code: 'auth-code-123' });
+      await apiRequestWithBearer('POST', '/openapi/agent-auth/verify', 'my-bearer-token', { code: 'auth-code-123' });
 
       const [, options] = mockFetch.mock.calls[0];
       expect((options as Record<string, unknown>).body).toContain('auth-code-123');
+    });
+
+    test('exits process on 403 FORBIDDEN error', async () => {
+      mockFetch.mockResolvedValueOnce({
+        status: 403,
+        json: async () => ({
+          statusCode: 403,
+          message: 'Forbidden',
+        }),
+      } as unknown as ReturnType<typeof fetch>);
+
+      const mockExit = jest.spyOn(process, 'exit').mockImplementation((code) => {
+        throw new Error(`process.exit(${code})`);
+      });
+
+      await expect(
+        apiRequestWithBearer('POST', '/openapi/agent-auth/init', 'invalid-token')
+      ).rejects.toThrow('process.exit(1)');
+
+      mockExit.mockRestore();
     });
   });
 

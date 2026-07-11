@@ -1,4 +1,3 @@
-export declare const BUILT_IN_BEARER_TOKEN = "550e8400-e29b-41d4-a716-446655440000";
 export interface Config {
     bearerToken?: string;
     apiKey?: string;
@@ -6,7 +5,7 @@ export interface Config {
 export declare function readConfig(): Config;
 export declare function writeConfig(config: Config): void;
 /**
- * 保存 Bearer Token（内置 token）
+ * 保存 Bearer Token（用户提供）
  */
 export declare function saveBearerToken(token: string): void;
 /**
@@ -22,7 +21,7 @@ export declare function saveTokens(bearerToken: string, apiKey: string): void;
  */
 export declare function clearTokens(): void;
 /**
- * 获取 Bearer Token（优先从配置读取，否则返回内置 token）
+ * 获取 Bearer Token
  */
 export declare function getBearerToken(): string;
 /**
@@ -33,5 +32,9 @@ export declare function getApiKey(): string;
  * 检查是否已完成授权（有 API Key）
  */
 export declare function isAuthorized(): boolean;
+/**
+ * 检查是否有 Bearer Token
+ */
+export declare function hasBearerToken(): boolean;
 export declare function configFilePath(): string;
 //# sourceMappingURL=config.d.ts.map

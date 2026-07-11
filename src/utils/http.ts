@@ -1,5 +1,5 @@
 import fetch from 'node-fetch';
-import { getBearerToken, getApiKey, BUILT_IN_BEARER_TOKEN } from './config';
+import { getBearerToken, getApiKey } from './config';
 
 export const BASE_URL = 'https://bytedance.aiforce.cloud/app/app_179t4b8e4mv';
 
@@ -19,31 +19,26 @@ export function getRequestOptions(): RequestOptions {
  * - token 失效或无效
  * - 未配置 token
  */
-function checkAuthError(data: unknown): void {
-  if (data && typeof data === 'object') {
+function checkAuthError(data: unknown, status: number): void {
+  // 401/403 错误处理
+  if (status === 401 || status === 403) {
     const d = data as Record<string, unknown>;
-    const statusCode = d.statusCode as number;
-    const message = (d.message as string) || '';
+    const message = (d?.message as string) || '';
 
-    // 401 未授权或 token 无效
-    if (statusCode === 401) {
-      console.error(JSON.stringify({
-        ok: false,
-        error: 'TOKEN_INVALID',
-        message: 'Token 已失效或未授权，请重新执行授权流程：\n  1. lbp-growth-calendar auth init\n  2. 在浏览器中完成授权\n  3. lbp-growth-calendar auth verify <auth-code>',
-      }, null, 2));
-      process.exit(1);
-    }
-
-    // 403 禁止访问
-    if (statusCode === 403) {
-      console.error(JSON.stringify({
-        ok: false,
-        error: 'FORBIDDEN',
-        message: '没有权限访问该资源',
-      }, null, 2));
-      process.exit(1);
-    }
+    console.error(JSON.stringify({
+      ok: false,
+      error: status === 401 ? 'UNAUTHORIZED' : 'FORBIDDEN',
+      message: status === 401
+        ? '认证失败：Token 无效或已过期。请检查 bearer token 是否正确，并重新执行授权流程。'
+        : '禁止访问：没有权限调用此接口。请确认 bearer token 有权限访问 init/verify 接口。',
+      details: message,
+      suggestion: [
+        '1. 确认 bearer token 正确：lbp-growth-calendar auth init --bearer-token <your-token>',
+        '2. 重新执行授权流程',
+        '3. 联系管理员确认 token 权限',
+      ],
+    }, null, 2));
+    process.exit(1);
   }
 }
 
@@ -58,7 +53,7 @@ export async function apiRequest(
     'Content-Type': 'application/json',
   };
 
-  // 始终携带内置的 Bearer Token（用于基础认证）
+  // 始终携带 Bearer Token（用于基础认证）
   headers['Authorization'] = `Bearer ${options.bearerToken}`;
 
   // 如果有 API Key，同时携带 x-api-key（用于业务接口权限）
@@ -79,26 +74,25 @@ export async function apiRequest(
   const data = await response.json();
 
   // 全局认证错误拦截
-  checkAuthError(data);
+  checkAuthError(data, response.status);
 
   return { status: response.status, data };
 }
 
 /**
- * 无需 API Key 的 API 请求（用于 init 和 verify，只需要内置 Bearer Token）
+ * 使用指定 Bearer Token 调用 API（用于 init 和 verify）
  */
-export async function apiRequestNoAuth(
+export async function apiRequestWithBearer(
   method: string,
   path: string,
+  bearerToken: string,
   body?: Record<string, unknown>
 ): Promise<{ status: number; data: unknown }> {
   const url = `${BASE_URL}${path}`;
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
+    'Authorization': `Bearer ${bearerToken}`,
   };
-
-  // init 和 verify 只需要内置的 Bearer Token
-  headers['Authorization'] = `Bearer ${BUILT_IN_BEARER_TOKEN}`;
 
   const fetchOptions: Record<string, unknown> = {
     method,
@@ -111,6 +105,10 @@ export async function apiRequestNoAuth(
 
   const response = await fetch(url, fetchOptions as Parameters<typeof fetch>[1]);
   const data = await response.json();
+
+  // 检查认证错误
+  checkAuthError(data, response.status);
+
   return { status: response.status, data };
 }
 
