@@ -32,6 +32,12 @@ export function saveToken(token: string): void {
   writeConfig(config);
 }
 
+export function clearToken(): void {
+  const config = readConfig();
+  delete config.token;
+  writeConfig(config);
+}
+
 export function getToken(): string {
   const config = readConfig();
   return config.token || '';

@@ -36,6 +36,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.readConfig = readConfig;
 exports.writeConfig = writeConfig;
 exports.saveToken = saveToken;
+exports.clearToken = clearToken;
 exports.getToken = getToken;
 exports.configFilePath = configFilePath;
 const fs = __importStar(require("fs"));
@@ -63,6 +64,11 @@ function writeConfig(config) {
 function saveToken(token) {
     const config = readConfig();
     config.token = token;
+    writeConfig(config);
+}
+function clearToken() {
+    const config = readConfig();
+    delete config.token;
     writeConfig(config);
 }
 function getToken() {

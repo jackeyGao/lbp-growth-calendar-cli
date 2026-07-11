@@ -7,6 +7,13 @@ export declare function apiRequest(method: string, path: string, options: Reques
     status: number;
     data: unknown;
 }>;
+/**
+ * 无需认证的 API 请求（用于 init 和 verify）
+ */
+export declare function apiRequestNoAuth(method: string, path: string, body?: Record<string, unknown>): Promise<{
+    status: number;
+    data: unknown;
+}>;
 export declare function outputJSON(data: unknown): void;
 export declare function outputSuccess(data: unknown): void;
 export declare function outputError(message: string, code?: string, exitCode?: number): never;

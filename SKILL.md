@@ -1,9 +1,9 @@
 ---
 name: lbp-growth-calendar
-description: 增长日历 CLI：DAU 数据查询、增长事件管理、数据订正 - 完全非交互式，AI/Agent 友好
+description: 增长日历 CLI：DAU 数据查询、增长事件管理、数据订正 - 完全非交互式，AI/Agent 友好，支持自主授权流程
 metadata:
   author: LBP Growth Team
-  version: 1.2.3
+  version: 2.0.0
   tags:
     - lbp
     - growth
@@ -13,11 +13,14 @@ metadata:
     - correct
     - ai-friendly
     - agent-ready
+    - oauth
+    - self-service-auth
 ---
 
 # 增长日历 CLI Agent
 
 增长日历系统的 CLI 技能，支持：
+- **自主授权流程**：`init` -> 浏览器授权 -> `verify`，无需人工申请 Token
 - 按日期范围查询每日 DAU 数据（含事件与订正变更记录）
 - 增长事件的增删改查
 - **数据订正**（DAU/额度/事件全量订正），提供 AI Friendly 原子操作与全量高级模式
@@ -25,7 +28,6 @@ metadata:
 ## 前置要求
 
 - Node.js 18+
-- Bearer Token（联系管理员获取）
 
 ## 安装
 
@@ -33,25 +35,72 @@ metadata:
 npm install -g lbp-growth-calendar
 ```
 
-## 配置 Token（任选其一）
+## 授权流程（获取 Token）
 
-API 基础地址已内置，无需配置。只需提供 Bearer Token 即可使用。
+CLI 支持完整的 OAuth 风格授权流程，无需联系管理员申请 Token。
+
+### 步骤 1：发起授权
+
+```bash
+lbp-growth-calendar auth init
+```
+
+输出示例：
+```json
+{
+  "ok": true,
+  "message": "授权流程已发起",
+  "authCode": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6",
+  "authUrl": "https://bytedance.aiforce.cloud/app/app_179t4b8e4mv/agent-auth?code=a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6",
+  "instructions": [
+    "1. 在浏览器中访问上面的 authUrl",
+    "2. 完成登录授权",
+    "3. 执行: lbp-growth-calendar auth verify a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6"
+  ]
+}
+```
+
+### 步骤 2：浏览器授权
+
+在浏览器中访问 `authUrl`，完成登录授权。
+
+### 步骤 3：换取 Token
+
+```bash
+lbp-growth-calendar auth verify <auth-code>
+```
+
+输出示例：
+```json
+{
+  "ok": true,
+  "message": "授权成功，Token 已保存",
+  "user": {
+    "userId": "1847292357012580",
+    "userName": "张伟"
+  },
+  "expiresAt": "2026-07-18T10:30:00.000Z",
+  "configFile": "/Users/username/.lbp-growth-calendar/config.json"
+}
+```
+
+### 验证配置
+
+```bash
+lbp-growth-calendar auth status
+```
+
+## 配置 Token（任选其一）
 
 ### 方式一：环境变量（推荐用于 CI/CD）
 
 ```bash
-export LBP_GROWTH_CALENDAR_TOKEN="your_bearer_token_here"
+export LBP_GROWTH_CALENDAR_TOKEN="your_token_here"
 ```
 
 ### 方式二：本地配置文件（推荐用于本地开发）
 
-```bash
-# 保存 Token 到本地配置文件
-lbp-growth-calendar auth save <your-token>
-
-# 验证配置
-lbp-growth-calendar auth status
-```
+通过上面的 `auth init` 和 `auth verify` 流程自动保存。
 
 ### 方式三：命令行参数
 
@@ -159,7 +208,8 @@ lbp-growth-calendar correct --date 2026-07-15 \
 
 | 命令 | 说明 | AI/Agent 友好 |
 |------|------|---------------|
-| `auth save <token>` | 保存 Token 到本地配置文件 | ✅ 非交互式，参数直接传入 |
+| `auth init` | 发起授权流程，获取授权码和授权链接 | ✅ 非交互式 |
+| `auth verify <code>` | 用授权码换取 Token 并保存 | ✅ 非交互式 |
 | `auth status` | 查看当前 Token 配置状态 | ✅ 输出结构化 JSON |
 | `auth clear` | 清除本地保存的 Token | ✅ 非交互式 |
 
@@ -202,14 +252,23 @@ lbp-growth-calendar correct --date 2026-07-15 \
 ```javascript
 const { execSync } = require('child_process');
 
-// ========== 认证配置 ==========
-// 方式一：使用环境变量（推荐用于 CI/CD）
+// ========== 自主授权流程 ==========
+// 步骤 1: 发起授权
+const initRes = JSON.parse(execSync('lbp-growth-calendar auth init', { encoding: 'utf8' }));
+console.log('请在浏览器中访问:', initRes.authUrl);
+
+// 步骤 2: 等待用户在浏览器中完成授权（这里需要人工介入或自动化浏览器操作）
+
+// 步骤 3: 用授权码换取 Token
+const verifyRes = JSON.parse(execSync(`lbp-growth-calendar auth verify ${initRes.authCode}`, { encoding: 'utf8' }));
+if (verifyRes.ok) {
+  console.log('授权成功，用户:', verifyRes.user.userName);
+}
+
+// ========== 或使用环境变量（适合 CI/CD）==========
 process.env.LBP_GROWTH_CALENDAR_TOKEN = 'your_token_here';
 
-// 方式二：使用本地配置文件
-execSync('lbp-growth-calendar auth save <your-token>');
-
-// 验证 Token 是否配置成功
+// 验证 Token 配置
 const status = JSON.parse(execSync('lbp-growth-calendar auth status', { encoding: 'utf8' }));
 console.log('Token 配置状态:', status.configured);
 
@@ -261,7 +320,7 @@ execSync('lbp-growth-calendar correct --date 2026-07-15 --events-file ./events.j
 ```json
 {
   "ok": false,
-  "error": "NOT_FOUND | INVALID_ARGS | REQUEST_FAILED | API_ERROR",
+  "error": "NOT_FOUND | INVALID_ARGS | REQUEST_FAILED | API_ERROR | AUTH_PENDING | AUTH_EXPIRED",
   "message": "错误描述"
 }
 ```
@@ -271,7 +330,7 @@ execSync('lbp-growth-calendar correct --date 2026-07-15 --events-file ./events.j
 | 码 | 含义 |
 |----|------|
 | 0 | 成功 |
-| 1 | 请求失败 / 参数错误 / 资源不存在 |
+| 1 | 请求失败 / 参数错误 / 资源不存在 / 授权失败 |
 
 ## 数据字段说明
 
@@ -320,17 +379,24 @@ execSync('lbp-growth-calendar correct --date 2026-07-15 --events-file ./events.j
 - 统一结构：`{ ok: boolean, data?: any, error?: string, message?: string }`
 - 成功时返回码 0，失败时返回码非 0
 
-### 3. 幂等设计
+### 3. 自主授权流程
+- 支持完整的 OAuth 风格授权流程
+- `init` 获取授权码和链接
+- `verify` 换取 Token
+- 无需人工联系管理员申请 Token
+
+### 4. 幂等设计
 - GET 查询操作天然幂等
 - 修改操作基于 ID，可重复执行
 - 原子操作自动合并数据，避免误删
 
-### 4. 错误处理
+### 5. 错误处理
 - 错误返回结构化 JSON
 - 包含错误代码和可读消息
 - 进程退出码明确区分成功/失败
 
-### 5. 灵活的认证方式
+### 6. 灵活的认证方式
+- 自主授权流程（适合首次使用）
 - 环境变量（适合 CI/CD）
 - 配置文件（适合本地开发）
 - 命令行参数（适合临时调用）
