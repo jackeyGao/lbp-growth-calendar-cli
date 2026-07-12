@@ -3,7 +3,7 @@ name: lbp-growth-calendar
 description: 增长日历 CLI：DAU 数据查询、增长事件管理、数据订正 - 完全非交互式，AI/Agent 友好，支持自主授权流程
 metadata:
   author: LBP Growth Team
-  version: 2.0.0
+  version: 2.1.0
   tags:
     - lbp
     - growth
@@ -348,16 +348,15 @@ execSync('lbp-growth-calendar correct --date 2026-07-15 --events-file ./events.j
 ```json
 {
   "ok": false,
-  "error": "MISSING_BEARER_TOKEN",
-  "title": "缺少必要参数",
-  "reason": "Token 未提供",
-  "message": "具体错误描述，包含操作指引",
+  "error": "AUTH_EXPIRED",
+  "title": "授权码已过期",
+  "reason": "授权码有效期已过",
+  "message": "具体错误描述",
   "suggestion": [
-    "1. 具体的解决步骤 1",
-    "2. 具体的解决步骤 2",
-    "3. 请联系 jg（俊奇）获取技术支持"
+    "1. 自助解决步骤 1",
+    "2. 自助解决步骤 2"
   ],
-  "quickFix": "快速修复命令或检查方法"
+  "quickFix": "快速修复命令"
 }
 ```
 
@@ -365,7 +364,7 @@ execSync('lbp-growth-calendar correct --date 2026-07-15 --events-file ./events.j
 | 错误代码 | 场景 | 解决方案 |
 |---------|------|---------|
 | `UNAUTHORIZED` (401) | Token 无效或过期 | 重新执行 init -> verify 流程 |
-| `FORBIDDEN` (403) | 无权限访问接口 | 联系管理员确认权限 |
+| `FORBIDDEN` (403) | 无权限访问接口 | 检查 CLI 版本，或稍后重试 |
 | `NOT_CONFIGURED` | 未执行授权流程 | 执行 init -> verify 完整流程 |
 | `API_KEY_MISSING` | verify 步骤未完成 | 执行 auth verify <code> |
 | `AUTH_PENDING` | 用户未完成浏览器授权 | 在浏览器中完成授权后重试 |
@@ -373,11 +372,16 @@ execSync('lbp-growth-calendar correct --date 2026-07-15 --events-file ./events.j
 | `INVALID_PARAMS` | 同时提供 code 和 --api-key | 二选一，只传其中一个 |
 | `MISSING_PARAMS` | 未提供 code 或 --api-key | 提供 code 或 --api-key 之一 |
 | `NOT_FOUND` | 资源不存在 | 检查 ID 或日期参数是否正确 |
-| `API_ERROR` | 服务端错误 | 稍后重试或联系技术支持 |
+| `API_ERROR` | 服务端错误 | 稍后重试 |
 
-**技术支持：jg（俊奇）**
+**错误处理原则**
 
-所有错误消息都会包含 `请联系 jg（俊奇）` 的提示。Agent 在遇到无法处理的错误时，应提示用户联系 jg（俊奇）获取帮助。
+CLI 的错误消息遵循"自助优先"原则：
+1. **首先提供可自助解决的方案**（如重新执行流程、检查参数、稍后重试）
+2. **提供 quickFix 快速修复命令**
+3. **仅在极少数无法自助解决的情况下**，才建议联系 jg（俊奇）
+
+Agent 应该根据 error 代码和 suggestion 尝试自助修复，不必每次遇到问题都联系技术支持。
 
 ## 返回码
 
@@ -449,10 +453,10 @@ execSync('lbp-growth-calendar correct --date 2026-07-15 --events-file ./events.j
 - 修改操作基于 ID，可重复执行
 - 原子操作自动合并数据，避免误删
 
-### 5. 错误处理（Agent 优先设计）
+### 5. 错误处理（自助优先设计）
 - **结构化错误**：返回 JSON 包含 error、title、reason、suggestion
-- **可行动的建议**：每个错误都包含具体的解决步骤
-- **联系人信息**：所有错误提示包含联系人（jg/俊奇），便于 escalation
+- **可行动的建议**：优先提供可自助解决的步骤
+- **联系人信息**：仅在无法自助解决时，建议联系 jg（俊奇）
 - **快速修复**：提供 quickFix 字段，Agent 可直接执行
 - **无歧义**：错误代码唯一，Agent 可程序化判断
 
@@ -466,3 +470,4 @@ execSync('lbp-growth-calendar correct --date 2026-07-15 --events-file ./events.j
 
 - 仓库: https://github.com/jackeyGao/lbp-growth-cli
 - 问题反馈: https://github.com/jackeyGao/lbp-growth-cli/issues
+- 妙搭应用（Web 端）: https://bytedance.aiforce.cloud/app/app_179t4b8e4mv

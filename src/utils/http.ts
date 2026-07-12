@@ -3,8 +3,8 @@ import { getToken, getApiKey } from './config';
 
 export const BASE_URL = 'https://bytedance.aiforce.cloud/app/app_179t4b8e4mv';
 
-// 联系人信息
-const CONTACT_INFO = '请联系 jg（俊奇）';
+// 兜底联系人（仅用于极少数无法自助解决的场景）
+const ESCALATION_CONTACT = '如上述方案无法解决，请联系 jg（俊奇）';
 
 export interface RequestOptions {
   token: string;
@@ -40,12 +40,12 @@ function checkAuthError(data: unknown, status: number): void {
       reason: errorReason,
       details: message,
       suggestion: [
-        `1. 确认 Bearer Token 正确且未过期（${CONTACT_INFO}获取）`,
-        '2. 确认 API Key 未过期（如过期需重新执行 verify）',
-        '3. 确认 Token 有访问该接口的权限',
-        `4. 如问题持续，${CONTACT_INFO}技术支持`,
+        '1. 执行 lbp-growth-calendar auth status 检查认证状态',
+        '2. 如 API Key 过期，重新执行 auth init -> verify 流程',
+        '3. 确认已完成用户授权流程',
+        `4. ${ESCALATION_CONTACT}`,
       ],
-      quickFix: '执行 lbp-growth-calendar auth status 检查 Token 状态',
+      quickFix: '执行 lbp-growth-calendar auth init 重新发起授权',
     }, null, 2));
     process.exit(1);
   }
@@ -63,12 +63,11 @@ function checkAuthConfigured(): void {
       ok: false,
       error: 'NOT_CONFIGURED',
       title: '未配置认证信息',
-      reason: '本地未找到 Token 和 API Key',
+      reason: '本地未找到 API Key',
       suggestion: [
-        `1. 获取 Token（${CONTACT_INFO}）`,
-        '2. 执行: lbp-growth-calendar auth init --token <token>',
-        '3. 在浏览器中完成授权',
-        '4. 执行: lbp-growth-calendar auth verify <code>',
+        '1. 执行: lbp-growth-calendar auth init',
+        '2. 在浏览器中完成授权',
+        '3. 执行: lbp-growth-calendar auth verify <code>',
       ],
       quickCheck: '执行 lbp-growth-calendar auth status 查看当前配置',
     }, null, 2));
@@ -80,12 +79,11 @@ function checkAuthConfigured(): void {
       ok: false,
       error: 'API_KEY_MISSING',
       title: '缺少 API Key',
-      reason: 'Token 已配置，但 API Key 未获取（verify 步骤未完成）',
+      reason: '用户授权未完成（verify 步骤未完成）',
       suggestion: [
         '1. 确认已在浏览器中完成授权',
-        '2. 获取授权码并执行: lbp-growth-calendar auth verify <code>',
-        '3. 如丢失授权码，需重新执行 init 步骤',
-        `4. 需要帮助，${CONTACT_INFO}技术支持`,
+        '2. 执行: lbp-growth-calendar auth verify <code>',
+        '3. 如丢失授权码，重新执行 auth init 获取新的授权码',
       ],
       quickCheck: '执行 lbp-growth-calendar auth status 查看当前配置',
     }, null, 2));
@@ -166,13 +164,12 @@ export async function apiRequestWithBearer(
       ok: false,
       error: errorType,
       title: response.status === 401 ? '认证失败' : '禁止访问',
-      reason: 'Token 无效或没有权限访问 init/verify 接口',
+      reason: '内置 Token 无效或没有权限访问 init/verify 接口',
       details: message,
       suggestion: [
-        `1. 确认 Token 正确（${CONTACT_INFO}获取）`,
-        '2. 确认 Token 未过期',
-        '3. 确认 Token 有访问 init/verify 接口的权限',
-        `4. 如问题持续，${CONTACT_INFO}技术支持`,
+        '1. 检查 CLI 是否为最新版本（npm update -g lbp-growth-calendar）',
+        '2. 稍后重试',
+        `3. ${ESCALATION_CONTACT}`,
       ],
     }, null, 2));
     process.exit(1);
@@ -241,7 +238,7 @@ export function handleApiResponse(status: number, data: unknown, expectedStatus:
   } else {
     const apiError = (data as Record<string, unknown>)?.message as string || '';
     outputError(
-      `API 返回状态码 ${status}: ${apiError || JSON.stringify(data)}。${CONTACT_INFO}技术支持。`,
+      `API 返回状态码 ${status}: ${apiError || JSON.stringify(data)}。建议稍后重试。`,
       'API_ERROR',
       1
     );

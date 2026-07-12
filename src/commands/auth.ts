@@ -14,8 +14,8 @@ import {
 } from '../utils/config';
 import { outputJSON, outputError, apiRequestWithBearer, apiRequestWithApiKey } from '../utils/http';
 
-// 联系人信息
-const CONTACT_INFO = '请联系 jg（俊奇）获取';
+// 兜底联系人（仅用于极少数无法自助解决的场景）
+const ESCALATION_CONTACT = '如上述方案无法解决，请联系 jg（俊奇）';
 
 export function registerAuthCommand(program: Command): void {
   const auth = program
@@ -42,7 +42,7 @@ export function registerAuthCommand(program: Command): void {
 
         if (status !== 200) {
           outputError(
-            `发起授权失败: HTTP ${status}。服务暂不可用，请稍后再试。${CONTACT_INFO}技术支持。`,
+            `发起授权失败: HTTP ${status}。建议：1) 检查网络连接；2) 稍后重试；3) ${ESCALATION_CONTACT}`,
             'AUTH_INIT_FAILED'
           );
           return;
@@ -64,11 +64,11 @@ export function registerAuthCommand(program: Command): void {
             '步骤 3: 在 CLI 中执行: lbp-growth-calendar auth verify ' + response.code,
           ],
           warning: '步骤 2 必须由用户手动在浏览器中完成，Agent 绝对不能自动调用浏览器或尝试自动化登录流程。',
-          note: `授权码已保存。完成步骤 2 后执行 verify 即可获取 API Key。如有问题，${CONTACT_INFO}技术支持。`,
+          note: `授权码已保存。完成步骤 2 后执行 verify 即可获取 API Key。`,
         });
       } catch (error) {
         outputError(
-          `授权流程异常: ${error instanceof Error ? error.message : String(error)}。${CONTACT_INFO}技术支持。`,
+          `授权流程异常: ${error instanceof Error ? error.message : String(error)}。建议检查网络连接后重试。`,
           'AUTH_INIT_FAILED'
         );
       }
@@ -113,7 +113,7 @@ export function registerAuthCommand(program: Command): void {
 
           if (status === 404) {
             outputError(
-              `无效的授权码: ${code}。可能原因：1) 授权码已过期；2) 授权码输入错误；3) 用户未在浏览器中完成授权。建议重新执行 init 获取新的授权码。`,
+              `无效的授权码: ${code}。可能原因：1) 授权码已过期，请重新执行 auth init；2) 授权码输入错误；3) 用户未在浏览器中完成授权。`,
               'INVALID_AUTH_CODE'
             );
             return;
@@ -126,7 +126,7 @@ export function registerAuthCommand(program: Command): void {
 
           if (status !== 200) {
             outputError(
-              `验证授权码失败: HTTP ${status}。请检查网络连接或 ${CONTACT_INFO}技术支持。`,
+              `验证授权码失败: HTTP ${status}。建议：1) 检查网络连接；2) 稍后重试。`,
               'AUTH_VERIFY_FAILED'
             );
             return;
@@ -148,8 +148,7 @@ export function registerAuthCommand(program: Command): void {
               status: response.status,
               suggestion: [
                 '1. 检查浏览器是否已完成授权流程',
-                '2. 确认使用的是最新的授权码',
-                `3. 如问题持续，${CONTACT_INFO}技术支持`,
+                '2. 确认使用的是最新的授权码（重新执行 auth init 可获取新授权码）',
               ],
             });
             return;
@@ -159,36 +158,35 @@ export function registerAuthCommand(program: Command): void {
             outputJSON({
               ok: false,
               error: 'AUTH_EXPIRED',
-              message: `授权码已过期。请重新执行：lbp-growth-calendar auth init --token <token> 获取新的授权码。`,
+              message: `授权码已过期。请重新执行 auth init 获取新的授权码。`,
               status: response.status,
               suggestion: [
-                '1. 重新执行 init 获取新的授权码',
+                '1. 执行 lbp-growth-calendar auth init 获取新的授权码',
                 '2. 在浏览器中尽快完成授权',
-                `3. 如频繁过期，${CONTACT_INFO}技术支持`,
               ],
             });
             return;
           }
 
           if (response.status === 'completed' && response.token) {
-            // 保存 API Key（Token 已在 init 时保存）
+            // 保存 API Key
             saveApiKey(response.token);
             outputJSON({
               ok: true,
-              message: '授权成功！Token 和 API Key 都已保存',
+              message: '授权成功！API Key 已保存',
               user: {
                 userId: response.userId,
                 userName: response.userName,
               },
               expiresAt: response.expiresAt,
               configFile: configFilePath(),
-              note: `两个凭证已保存：Token（固定长期有效）+ API Key（动态，过期时间见 expiresAt）。现在可以访问业务接口了。`,
+              note: `API Key（动态，过期时间见 expiresAt）已保存。现在可以访问业务接口了。`,
             });
             return;
           }
 
           outputError(
-            `未知的授权状态: ${response.status}。${CONTACT_INFO}技术支持。`,
+            `未知的授权状态: ${response.status}。建议重新执行 auth init 流程。`,
             'UNKNOWN_AUTH_STATUS'
           );
           return;
@@ -216,7 +214,7 @@ export function registerAuthCommand(program: Command): void {
 
           if (status !== 200) {
             outputError(
-              `验证 API Key 失败: HTTP ${status}。请检查网络连接或 ${CONTACT_INFO}技术支持。`,
+              `验证 API Key 失败: HTTP ${status}。建议：1) 检查网络连接；2) 稍后重试。`,
               'API_KEY_VERIFY_FAILED'
             );
             return;
@@ -256,20 +254,19 @@ export function registerAuthCommand(program: Command): void {
               suggestion: [
                 '1. 检查 API Key 是否正确',
                 '2. 如已过期，请重新执行 auth init -> verify 流程',
-                `3. 如问题持续，${CONTACT_INFO}技术支持`,
               ],
             });
             return;
           }
 
           outputError(
-            `未知的验证状态: ${(response as Record<string, unknown>).status}。${CONTACT_INFO}技术支持。`,
+            `未知的验证状态: ${(response as Record<string, unknown>).status}。建议重新执行验证流程。`,
             'UNKNOWN_VERIFY_STATUS'
           );
         }
       } catch (error) {
         outputError(
-          `验证异常: ${error instanceof Error ? error.message : String(error)}。${CONTACT_INFO}技术支持。`,
+          `验证异常: ${error instanceof Error ? error.message : String(error)}。建议检查网络连接后重试。`,
           'AUTH_VERIFY_FAILED'
         );
       }
@@ -317,7 +314,7 @@ export function registerAuthCommand(program: Command): void {
           suggestion: [
             '1. 确认已在浏览器中完成授权',
             `2. 执行: lbp-growth-calendar auth verify ${authCode}`,
-            `3. 如丢失授权码，需重新执行 init 步骤。${CONTACT_INFO}技术支持`,
+            '3. 如丢失授权码，重新执行 auth init 获取新的授权码',
           ],
         });
       } else {
@@ -337,7 +334,6 @@ export function registerAuthCommand(program: Command): void {
             '步骤 3: lbp-growth-calendar auth verify <auth-code>',
           ],
           configFile: configFilePath(),
-          note: `如有问题，${CONTACT_INFO}技术支持。`,
         });
       }
     });
@@ -350,8 +346,7 @@ export function registerAuthCommand(program: Command): void {
       clearAuth();
       outputJSON({
         ok: true,
-        message: '所有认证信息已清除。如需重新授权，请执行 auth init --token <token>',
-        note: `如需获取新的 Token，${CONTACT_INFO}。`,
+        message: '所有认证信息已清除。如需重新授权，请执行 auth init',
       });
     });
 }
