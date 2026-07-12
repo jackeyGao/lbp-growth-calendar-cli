@@ -10,6 +10,7 @@ import {
   getAuthCode,
   isAuthorized,
   configFilePath,
+  DEFAULT_BEARER_TOKEN,
 } from '../utils/config';
 import { outputJSON, outputError, apiRequestWithBearer, apiRequestWithApiKey } from '../utils/http';
 
@@ -21,28 +22,17 @@ export function registerAuthCommand(program: Command): void {
     .command('auth')
     .description('认证管理（Token 配置）');
 
-  // auth init - 发起授权流程，需要提供 token
+  // auth init - 发起授权流程（使用内置 Bearer Token）
   auth
     .command('init')
-    .description('发起授权流程，获取授权码和授权链接')
-    .requiredOption('--token <token>', `Token（${CONTACT_INFO}）`)
-    .action(async (opts) => {
+    .description('发起用户授权流程，获取授权码和授权链接')
+    .action(async () => {
       try {
-        const token = opts.token;
-
-        if (!token) {
-          outputError(
-            `Token 不能为空。${CONTACT_INFO} --token 参数。`,
-            'MISSING_TOKEN'
-          );
-          return;
-        }
-
-        // 使用用户提供的 Token 调用 init 接口
+        // 使用内置的 Bearer Token 调用 init 接口
         const { status, data } = await apiRequestWithBearer(
           'POST',
           '/openapi/agent-auth/init',
-          token
+          DEFAULT_BEARER_TOKEN
         );
 
         if (status === 401 || status === 403) {
@@ -52,7 +42,7 @@ export function registerAuthCommand(program: Command): void {
 
         if (status !== 200) {
           outputError(
-            `发起授权失败: HTTP ${status}。可能原因：1) Token 无效；2) 服务暂不可用。${CONTACT_INFO}有效的 Token 或稍后再试。`,
+            `发起授权失败: HTTP ${status}。服务暂不可用，请稍后再试。${CONTACT_INFO}技术支持。`,
             'AUTH_INIT_FAILED'
           );
           return;
@@ -60,22 +50,21 @@ export function registerAuthCommand(program: Command): void {
 
         const response = data as { code: string; authUrl: string };
 
-        // 成功后保存 Token 和授权码
-        saveToken(token);
+        // 保存授权码（Bearer Token 已内置，无需保存）
         saveAuthCode(response.code);
 
         outputJSON({
           ok: true,
-          message: '授权流程已发起，Token 和授权码已保存到本地配置',
+          message: '用户授权流程已发起，授权码已保存到本地配置',
           authCode: response.code,
           authUrl: response.authUrl,
           instructions: [
-            '步骤 1（已完成）: 在 CLI 中执行 init，保存 Token 和授权码',
+            '步骤 1（已完成）: CLI 已获取授权码',
             '步骤 2: 【用户手动操作】在浏览器中访问上面的 authUrl，完成登录授权',
             '步骤 3: 在 CLI 中执行: lbp-growth-calendar auth verify ' + response.code,
           ],
           warning: '步骤 2 必须由用户手动在浏览器中完成，Agent 绝对不能自动调用浏览器或尝试自动化登录流程。',
-          note: `Token 和授权码已保存。后续获取 API Key 后即可访问业务接口。如有问题，${CONTACT_INFO}技术支持。`,
+          note: `授权码已保存。完成步骤 2 后执行 verify 即可获取 API Key。如有问题，${CONTACT_INFO}技术支持。`,
         });
       } catch (error) {
         outputError(
@@ -114,21 +103,11 @@ export function registerAuthCommand(program: Command): void {
 
         // 模式 1: 携带 code - 用 code 查询授权状态，返回 token 颁发结果
         if (hasCode) {
-          // 获取已保存的 token
-          const token = getToken();
-
-          if (!token) {
-            outputError(
-              `未找到 Token。请先执行 init 步骤：lbp-growth-calendar auth init --token <token>。${CONTACT_INFO}获取 Token。`,
-              'MISSING_TOKEN'
-            );
-            return;
-          }
-
+          // 使用内置的 Bearer Token 调用 verify 接口
           const { status, data } = await apiRequestWithBearer(
             'POST',
             '/openapi/agent-auth/verify',
-            token,
+            DEFAULT_BEARER_TOKEN,
             { code }
           );
 
@@ -301,18 +280,16 @@ export function registerAuthCommand(program: Command): void {
     .command('status')
     .description('查看当前认证配置状态')
     .action(() => {
-      const token = getToken();
       const apiKey = getApiKey();
       const authCode = getAuthCode();
 
-      if (token && apiKey) {
+      if (apiKey) {
         outputJSON({
           ok: true,
           configured: true,
-          token: {
+          bearerToken: {
             configured: true,
-            preview: `${token.slice(0, 6)}...${token.slice(-4)}`,
-            type: '固定值（长期有效）',
+            type: '内置（长期有效）',
           },
           apiKey: {
             configured: true,
@@ -320,26 +297,26 @@ export function registerAuthCommand(program: Command): void {
             type: '动态值（有过期时间）',
           },
           authCode: authCode || '已使用或过期',
-          message: '授权完成，可以访问所有接口',
+          message: '用户授权完成，可以访问所有接口',
           configFile: configFilePath(),
         });
-      } else if (token && !apiKey) {
+      } else if (authCode) {
         outputJSON({
           ok: false,
           configured: false,
-          token: {
+          bearerToken: {
             configured: true,
-            preview: `${token.slice(0, 6)}...${token.slice(-4)}`,
+            type: '内置（长期有效）',
           },
           apiKey: {
             configured: false,
             message: '未完成 verify 步骤',
           },
-          authCode: authCode || null,
-          message: `Token 已配置，但 API Key 未获取。请执行 auth verify ${authCode || '<code>'} 完成授权。`,
+          authCode: authCode,
+          message: `用户尚未完成浏览器授权。请执行 auth verify ${authCode} 完成授权。`,
           suggestion: [
             '1. 确认已在浏览器中完成授权',
-            `2. 执行: lbp-growth-calendar auth verify ${authCode || '<code>'}`,
+            `2. 执行: lbp-growth-calendar auth verify ${authCode}`,
             `3. 如丢失授权码，需重新执行 init 步骤。${CONTACT_INFO}技术支持`,
           ],
         });
@@ -347,17 +324,20 @@ export function registerAuthCommand(program: Command): void {
         outputJSON({
           ok: false,
           configured: false,
-          token: { configured: false },
+          bearerToken: {
+            configured: true,
+            type: '内置（长期有效）',
+          },
           apiKey: { configured: false },
           authCode: null,
-          message: `尚未完成授权配置。`,
+          message: `尚未完成用户授权。`,
           setupInstructions: [
-            '步骤 1: lbp-growth-calendar auth init --token <token>',
+            '步骤 1: lbp-growth-calendar auth init',
             '步骤 2: 在浏览器中访问输出的 authUrl 完成授权',
             '步骤 3: lbp-growth-calendar auth verify <auth-code>',
           ],
           configFile: configFilePath(),
-          note: `${CONTACT_INFO} Token。`,
+          note: `如有问题，${CONTACT_INFO}技术支持。`,
         });
       }
     });

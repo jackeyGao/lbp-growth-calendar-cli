@@ -132,22 +132,7 @@ describe('auth init', () => {
     jest.clearAllMocks();
   });
 
-  test('init requires --token option', async () => {
-    const { registerAuthCommand } = await import('../commands/auth');
-    const { Command } = await import('commander');
-    const program = new Command();
-    registerAuthCommand(program);
-
-    // 不提供 --token 应该报错
-    try {
-      await program.parseAsync(['node', 'test', 'auth', 'init']);
-    } catch (e) {
-      // 应该抛出错误，因为缺少必需参数
-      expect(e).toBeDefined();
-    }
-  });
-
-  test('init with token saves it and auth code', async () => {
+  test('init without token uses default bearer token', async () => {
     const mockResponse = {
       code: 'abc123def456',
       authUrl: 'https://example.com/auth?code=abc123def456',
@@ -162,21 +147,23 @@ describe('auth init', () => {
     const program = new Command();
     registerAuthCommand(program);
 
-    await program.parseAsync(['node', 'test', 'auth', 'init', '--token', 'my-token']);
+    await program.parseAsync(['node', 'test', 'auth', 'init']);
 
+    // 应该使用内置的 DEFAULT_BEARER_TOKEN 调用
     expect(apiRequestWithBearer).toHaveBeenCalledWith(
       'POST',
       '/openapi/agent-auth/init',
-      'my-token'
+      expect.any(String)
     );
-    expect(saveToken).toHaveBeenCalledWith('my-token');
+    // 不再保存 token（已内置），只保存 authCode
+    expect(saveToken).not.toHaveBeenCalled();
     expect(saveAuthCode).toHaveBeenCalledWith('abc123def456');
   });
 
-  test('init with invalid token returns 403', async () => {
+  test('init with server error returns error', async () => {
     (apiRequestWithBearer as jest.Mock).mockResolvedValueOnce({
-      status: 403,
-      data: { message: 'Forbidden' },
+      status: 500,
+      data: { message: 'Internal Server Error' },
     });
 
     const { registerAuthCommand } = await import('../commands/auth');
@@ -184,10 +171,10 @@ describe('auth init', () => {
     const program = new Command();
     registerAuthCommand(program);
 
-    await program.parseAsync(['node', 'test', 'auth', 'init', '--token', 'invalid-token']);
+    await program.parseAsync(['node', 'test', 'auth', 'init']);
 
     expect(apiRequestWithBearer).toHaveBeenCalled();
-    expect(saveToken).not.toHaveBeenCalled();
+    expect(saveAuthCode).not.toHaveBeenCalled();
   });
 });
 
@@ -196,22 +183,7 @@ describe('auth verify', () => {
     jest.clearAllMocks();
   });
 
-  test('verify requires token to be saved first', async () => {
-    (getToken as jest.Mock).mockReturnValueOnce('');
-
-    const { registerAuthCommand } = await import('../commands/auth');
-    const { Command } = await import('commander');
-    const program = new Command();
-    registerAuthCommand(program);
-
-    await program.parseAsync(['node', 'test', 'auth', 'verify', 'auth-code-123']);
-
-    expect(apiRequestWithBearer).not.toHaveBeenCalled();
-  });
-
-  test('verify saves api key on completed status', async () => {
-    (getToken as jest.Mock).mockReturnValueOnce('saved-token');
-
+  test('verify with code uses default bearer token', async () => {
     const mockResponse = {
       status: 'completed',
       token: 'api-key-123',
@@ -231,14 +203,16 @@ describe('auth verify', () => {
 
     await program.parseAsync(['node', 'test', 'auth', 'verify', 'auth-code-123']);
 
+    // 应该使用内置的 DEFAULT_BEARER_TOKEN 调用
     expect(apiRequestWithBearer).toHaveBeenCalledWith(
       'POST',
       '/openapi/agent-auth/verify',
-      'saved-token',
+      expect.any(String),
       { code: 'auth-code-123' }
     );
     expect(saveApiKey).toHaveBeenCalledWith('api-key-123');
   });
+
 
   test('verify with --api-key validates API key and returns valid status', async () => {
     const mockResponse = {

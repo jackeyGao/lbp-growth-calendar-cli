@@ -5,6 +5,9 @@ import * as os from 'os';
 const CONFIG_DIR = path.join(os.homedir(), '.lbp-growth-calendar');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 
+// 内置的默认 Bearer Token（Agent 级别，用于访问 init/verify 接口）
+export const DEFAULT_BEARER_TOKEN = 'e548uqkSvCZ_EtfcwL5ZIIoEiNVEI3Ws0-xpAaRlkDg';
+
 export interface Config {
   authCode?: string;     // 通过 init 获取的授权码（临时，用于 verify）
   token?: string;        // 用户提供的固定 Token（Bearer Token，用于 init/verify 接口）

@@ -9,44 +9,37 @@ function registerAuthCommand(program) {
     const auth = program
         .command('auth')
         .description('认证管理（Token 配置）');
-    // auth init - 发起授权流程，需要提供 token
+    // auth init - 发起授权流程（使用内置 Bearer Token）
     auth
         .command('init')
-        .description('发起授权流程，获取授权码和授权链接')
-        .requiredOption('--token <token>', `Token（${CONTACT_INFO}）`)
-        .action(async (opts) => {
+        .description('发起用户授权流程，获取授权码和授权链接')
+        .action(async () => {
         try {
-            const token = opts.token;
-            if (!token) {
-                (0, http_1.outputError)(`Token 不能为空。${CONTACT_INFO} --token 参数。`, 'MISSING_TOKEN');
-                return;
-            }
-            // 使用用户提供的 Token 调用 init 接口
-            const { status, data } = await (0, http_1.apiRequestWithBearer)('POST', '/openapi/agent-auth/init', token);
+            // 使用内置的 Bearer Token 调用 init 接口
+            const { status, data } = await (0, http_1.apiRequestWithBearer)('POST', '/openapi/agent-auth/init', config_1.DEFAULT_BEARER_TOKEN);
             if (status === 401 || status === 403) {
                 // 错误详情由 http.ts 中的 checkAuthError 处理
                 return;
             }
             if (status !== 200) {
-                (0, http_1.outputError)(`发起授权失败: HTTP ${status}。可能原因：1) Token 无效；2) 服务暂不可用。${CONTACT_INFO}有效的 Token 或稍后再试。`, 'AUTH_INIT_FAILED');
+                (0, http_1.outputError)(`发起授权失败: HTTP ${status}。服务暂不可用，请稍后再试。${CONTACT_INFO}技术支持。`, 'AUTH_INIT_FAILED');
                 return;
             }
             const response = data;
-            // 成功后保存 Token 和授权码
-            (0, config_1.saveToken)(token);
+            // 保存授权码（Bearer Token 已内置，无需保存）
             (0, config_1.saveAuthCode)(response.code);
             (0, http_1.outputJSON)({
                 ok: true,
-                message: '授权流程已发起，Token 和授权码已保存到本地配置',
+                message: '用户授权流程已发起，授权码已保存到本地配置',
                 authCode: response.code,
                 authUrl: response.authUrl,
                 instructions: [
-                    '步骤 1（已完成）: 在 CLI 中执行 init，保存 Token 和授权码',
+                    '步骤 1（已完成）: CLI 已获取授权码',
                     '步骤 2: 【用户手动操作】在浏览器中访问上面的 authUrl，完成登录授权',
                     '步骤 3: 在 CLI 中执行: lbp-growth-calendar auth verify ' + response.code,
                 ],
                 warning: '步骤 2 必须由用户手动在浏览器中完成，Agent 绝对不能自动调用浏览器或尝试自动化登录流程。',
-                note: `Token 和授权码已保存。后续获取 API Key 后即可访问业务接口。如有问题，${CONTACT_INFO}技术支持。`,
+                note: `授权码已保存。完成步骤 2 后执行 verify 即可获取 API Key。如有问题，${CONTACT_INFO}技术支持。`,
             });
         }
         catch (error) {
@@ -73,13 +66,8 @@ function registerAuthCommand(program) {
             }
             // 模式 1: 携带 code - 用 code 查询授权状态，返回 token 颁发结果
             if (hasCode) {
-                // 获取已保存的 token
-                const token = (0, config_1.getToken)();
-                if (!token) {
-                    (0, http_1.outputError)(`未找到 Token。请先执行 init 步骤：lbp-growth-calendar auth init --token <token>。${CONTACT_INFO}获取 Token。`, 'MISSING_TOKEN');
-                    return;
-                }
-                const { status, data } = await (0, http_1.apiRequestWithBearer)('POST', '/openapi/agent-auth/verify', token, { code });
+                // 使用内置的 Bearer Token 调用 verify 接口
+                const { status, data } = await (0, http_1.apiRequestWithBearer)('POST', '/openapi/agent-auth/verify', config_1.DEFAULT_BEARER_TOKEN, { code });
                 if (status === 404) {
                     (0, http_1.outputError)(`无效的授权码: ${code}。可能原因：1) 授权码已过期；2) 授权码输入错误；3) 用户未在浏览器中完成授权。建议重新执行 init 获取新的授权码。`, 'INVALID_AUTH_CODE');
                     return;
@@ -196,17 +184,15 @@ function registerAuthCommand(program) {
         .command('status')
         .description('查看当前认证配置状态')
         .action(() => {
-        const token = (0, config_1.getToken)();
         const apiKey = (0, config_1.getApiKey)();
         const authCode = (0, config_1.getAuthCode)();
-        if (token && apiKey) {
+        if (apiKey) {
             (0, http_1.outputJSON)({
                 ok: true,
                 configured: true,
-                token: {
+                bearerToken: {
                     configured: true,
-                    preview: `${token.slice(0, 6)}...${token.slice(-4)}`,
-                    type: '固定值（长期有效）',
+                    type: '内置（长期有效）',
                 },
                 apiKey: {
                     configured: true,
@@ -214,27 +200,27 @@ function registerAuthCommand(program) {
                     type: '动态值（有过期时间）',
                 },
                 authCode: authCode || '已使用或过期',
-                message: '授权完成，可以访问所有接口',
+                message: '用户授权完成，可以访问所有接口',
                 configFile: (0, config_1.configFilePath)(),
             });
         }
-        else if (token && !apiKey) {
+        else if (authCode) {
             (0, http_1.outputJSON)({
                 ok: false,
                 configured: false,
-                token: {
+                bearerToken: {
                     configured: true,
-                    preview: `${token.slice(0, 6)}...${token.slice(-4)}`,
+                    type: '内置（长期有效）',
                 },
                 apiKey: {
                     configured: false,
                     message: '未完成 verify 步骤',
                 },
-                authCode: authCode || null,
-                message: `Token 已配置，但 API Key 未获取。请执行 auth verify ${authCode || '<code>'} 完成授权。`,
+                authCode: authCode,
+                message: `用户尚未完成浏览器授权。请执行 auth verify ${authCode} 完成授权。`,
                 suggestion: [
                     '1. 确认已在浏览器中完成授权',
-                    `2. 执行: lbp-growth-calendar auth verify ${authCode || '<code>'}`,
+                    `2. 执行: lbp-growth-calendar auth verify ${authCode}`,
                     `3. 如丢失授权码，需重新执行 init 步骤。${CONTACT_INFO}技术支持`,
                 ],
             });
@@ -243,17 +229,20 @@ function registerAuthCommand(program) {
             (0, http_1.outputJSON)({
                 ok: false,
                 configured: false,
-                token: { configured: false },
+                bearerToken: {
+                    configured: true,
+                    type: '内置（长期有效）',
+                },
                 apiKey: { configured: false },
                 authCode: null,
-                message: `尚未完成授权配置。`,
+                message: `尚未完成用户授权。`,
                 setupInstructions: [
-                    '步骤 1: lbp-growth-calendar auth init --token <token>',
+                    '步骤 1: lbp-growth-calendar auth init',
                     '步骤 2: 在浏览器中访问输出的 authUrl 完成授权',
                     '步骤 3: lbp-growth-calendar auth verify <auth-code>',
                 ],
                 configFile: (0, config_1.configFilePath)(),
-                note: `${CONTACT_INFO} Token。`,
+                note: `如有问题，${CONTACT_INFO}技术支持。`,
             });
         }
     });

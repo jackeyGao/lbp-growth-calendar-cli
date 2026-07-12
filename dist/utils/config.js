@@ -33,6 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.DEFAULT_BEARER_TOKEN = void 0;
 exports.readConfig = readConfig;
 exports.writeConfig = writeConfig;
 exports.saveAuthCode = saveAuthCode;
@@ -51,6 +52,8 @@ const path = __importStar(require("path"));
 const os = __importStar(require("os"));
 const CONFIG_DIR = path.join(os.homedir(), '.lbp-growth-calendar');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
+// 内置的默认 Bearer Token（Agent 级别，用于访问 init/verify 接口）
+exports.DEFAULT_BEARER_TOKEN = 'e548uqkSvCZ_EtfcwL5ZIIoEiNVEI3Ws0-xpAaRlkDg';
 function readConfig() {
     try {
         if (!fs.existsSync(CONFIG_FILE))

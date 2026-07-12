@@ -35,34 +35,36 @@ metadata:
 npm install -g lbp-growth-calendar
 ```
 
-## 授权流程（获取 Token）
+## 授权流程（用户级别）
 
-CLI 使用双 Token 认证机制：
+CLI 使用内置 Bearer Token + 用户 API Key 的双层认证机制：
 
-| Token 类型 | 获取方式 | 有效期 | 用途 |
-|-----------|---------|--------|------|
-| **Token** | 从管理员获取 | 长期有效 | 访问 init/verify 接口 |
-| **API Key** | 通过 verify 获取 | 有过期时间 | 访问业务接口（DAU、Events 等） |
+| Token 类型 | 来源 | 有效期 | 用途 |
+|-----------|------|--------|------|
+| **Bearer Token** | CLI 内置 | 长期有效 | 访问 init/verify 接口（Agent 级别） |
+| **API Key** | 通过 verify 获取 | 有过期时间 | 访问业务接口（用户级别） |
 
-### 步骤 1：提供 Token，发起授权
+用户只需完成简单的三步授权：
+
+### 步骤 1：发起授权
 
 ```bash
-lbp-growth-calendar auth init --token <your-bearer-token>
+lbp-growth-calendar auth init
 ```
 
 输出示例：
 ```json
 {
   "ok": true,
-  "message": "授权流程已发起，Token 已保存到本地配置",
+  "message": "用户授权流程已发起，授权码已保存到本地配置",
   "authCode": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6",
   "authUrl": "https://bytedance.aiforce.cloud/app/app_179t4b8e4mv/agent-auth?code=a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6",
   "instructions": [
-    "1. 在浏览器中访问上面的 authUrl",
-    "2. 完成登录授权",
-    "3. 执行: lbp-growth-calendar auth verify a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6"
+    "步骤 1（已完成）: CLI 已获取授权码",
+    "步骤 2: 【用户手动操作】在浏览器中访问上面的 authUrl，完成登录授权",
+    "步骤 3: 在 CLI 中执行: lbp-growth-calendar auth verify a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6"
   ],
-  "note": "Token 和后续获取的 API Key 都已保存到本地，后续命令会自动使用"
+  "note": "授权码已保存。完成步骤 2 后执行 verify 即可获取 API Key。"
 }
 ```
 
@@ -81,7 +83,7 @@ lbp-growth-calendar auth init --token <your-bearer-token>
 - 尝试自动填充用户名密码
 - 任何自动化浏览器操作
 
-### 步骤 3：换取 Token
+### 步骤 3：换取 API Key
 
 ```bash
 lbp-growth-calendar auth verify <auth-code>
@@ -91,7 +93,7 @@ lbp-growth-calendar auth verify <auth-code>
 ```json
 {
   "ok": true,
-  "message": "授权成功，Token 已保存",
+  "message": "授权成功！API Key 已保存",
   "user": {
     "userId": "1847292357012580",
     "userName": "张伟"
@@ -114,8 +116,7 @@ lbp-growth-calendar auth status
   "configured": true,
   "bearerToken": {
     "configured": true,
-    "preview": "550e84...400000",
-    "type": "固定值（长期有效）"
+    "type": "内置（长期有效）"
   },
   "apiKey": {
     "configured": true,
@@ -225,12 +226,13 @@ lbp-growth-calendar correct --date 2026-07-15 \
 
 | 命令 | 说明 | AI/Agent 友好 |
 |------|------|---------------|
-| `auth init --token <token>` | 提供 Token，发起授权流程 | ✅ 非交互式 |
-| `auth verify <code>` | 用授权码换取 API Key | ✅ 非交互式 |
-| `auth status` | 查看当前 Token 配置状态 | ✅ 输出结构化 JSON |
-| `auth clear` | 清除本地保存的所有 Token | ✅ 非交互式 |
+| `auth init` | 发起用户授权流程（Bearer Token 已内置） | ✅ 非交互式 |
+| `auth verify <code>` | 用授权码换取用户 API Key | ✅ 非交互式 |
+| `auth verify --api-key <key>` | 验证已有 API Key 是否有效 | ✅ 非交互式 |
+| `auth status` | 查看当前认证配置状态 | ✅ 输出结构化 JSON |
+| `auth clear` | 清除本地保存的用户认证信息 | ✅ 非交互式 |
 
-**注意**：`--token` 是 init 命令的**必需参数**，需要从管理员获取。
+**注意**：Bearer Token 已内置在 CLI 中，用户只需完成浏览器授权即可。
 
 ### DAU 命令
 
@@ -260,12 +262,12 @@ lbp-growth-calendar correct --date 2026-07-15 \
 
 ### 全局选项
 
-本 CLI 不需要全局选项。所有认证通过 `auth` 命令管理：
-- `auth init --token <token>` 设置 Token
-- `auth verify <code>` 获取 API Key
-- 后续命令自动从配置文件读取两个 Token
+本 CLI 不需要全局选项。认证通过 `auth` 命令管理：
+- `auth init` 发起用户授权（Bearer Token 已内置）
+- `auth verify <code>` 获取用户 API Key
+- 后续命令自动从配置文件读取 API Key
 
-> **注意**：API 基础地址已内置，无需配置。
+> **注意**：API 基础地址和 Bearer Token 已内置，无需配置。
 
 ## Agent 使用示例
 
@@ -273,10 +275,9 @@ lbp-growth-calendar correct --date 2026-07-15 \
 const { execSync } = require('child_process');
 
 // ========== 自主授权流程 ==========
-// 步骤 1: 提供 Token，发起授权
-const BEARER_TOKEN = '从管理员获取的 Token';
+// 步骤 1: 发起授权（Bearer Token 已内置，无需提供）
 const initRes = JSON.parse(
-  execSync(`lbp-growth-calendar auth init --token ${BEARER_TOKEN}`, { encoding: 'utf8' })
+  execSync('lbp-growth-calendar auth init', { encoding: 'utf8' })
 );
 console.log('请在浏览器中访问:', initRes.authUrl);
 
@@ -363,13 +364,14 @@ execSync('lbp-growth-calendar correct --date 2026-07-15 --events-file ./events.j
 **常见错误代码**：
 | 错误代码 | 场景 | 解决方案 |
 |---------|------|---------|
-| `MISSING_BEARER_TOKEN` | init 时未提供 --token | 请联系 jg（俊奇）获取 Token |
-| `UNAUTHORIZED` (401) | Token 无效或过期 | 检查 Token 或重新授权 |
-| `FORBIDDEN` (403) | 无权限访问接口 | 确认 Token 权限或联系管理员 |
+| `UNAUTHORIZED` (401) | Token 无效或过期 | 重新执行 init -> verify 流程 |
+| `FORBIDDEN` (403) | 无权限访问接口 | 联系管理员确认权限 |
 | `NOT_CONFIGURED` | 未执行授权流程 | 执行 init -> verify 完整流程 |
 | `API_KEY_MISSING` | verify 步骤未完成 | 执行 auth verify <code> |
 | `AUTH_PENDING` | 用户未完成浏览器授权 | 在浏览器中完成授权后重试 |
 | `AUTH_EXPIRED` | 授权码过期 | 重新执行 init 获取新授权码 |
+| `INVALID_PARAMS` | 同时提供 code 和 --api-key | 二选一，只传其中一个 |
+| `MISSING_PARAMS` | 未提供 code 或 --api-key | 提供 code 或 --api-key 之一 |
 | `NOT_FOUND` | 资源不存在 | 检查 ID 或日期参数是否正确 |
 | `API_ERROR` | 服务端错误 | 稍后重试或联系技术支持 |
 

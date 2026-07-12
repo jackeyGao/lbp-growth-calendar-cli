@@ -1,3 +1,4 @@
+export declare const DEFAULT_BEARER_TOKEN = "e548uqkSvCZ_EtfcwL5ZIIoEiNVEI3Ws0-xpAaRlkDg";
 export interface Config {
     authCode?: string;
     token?: string;
