@@ -6,6 +6,11 @@ const CONFIG_DIR = path.join(os.homedir(), '.lbp-growth-calendar');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 
 // 内置的默认 Bearer Token（Agent 级别，用于访问 init/verify 接口）
+// 为什么硬编码了？ [解释下]
+// 在妙搭上OpenAPI必须开启Bearer Token, 所以必须携带。
+// 普通的bearer Token限制了所有权限， 必须完成人机认证方可成功调用。
+// 所以所有API属于 bearer token + 个人token（鉴权) 保护
+// bearer token 只是一张没有任何权限的入场券。
 export const DEFAULT_BEARER_TOKEN = 'e548uqkSvCZ_EtfcwL5ZIIoEiNVEI3Ws0-xpAaRlkDg';
 
 export interface Config {

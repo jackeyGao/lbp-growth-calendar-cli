@@ -1,10 +1,9 @@
 ---
 name: lbp-growth-calendar
-description: 增长日历 CLI：DAU 数据查询、增长事件管理、数据订正 - 完全非交互式，AI/Agent 友好，支持自主授权流程。妙搭应用：https://bytedance.aiforce.cloud/app/app_179t4b8e4mv
+description: 增长日历 CLI：DAU 数据查询、增长事件管理、数据订正 - 完全非交互式，AI/Agent 友好，支持自主授权流程
 metadata:
   author: LBP Growth Team
   version: 2.1.0
-  appUrl: https://bytedance.aiforce.cloud/app/app_179t4b8e4mv
   tags:
     - lbp
     - growth
@@ -19,8 +18,6 @@ metadata:
 ---
 
 # 增长日历 CLI Agent
-
-> 📱 **妙搭应用（Web 端）**: https://bytedance.aiforce.cloud/app/app_179t4b8e4mv
 
 增长日历系统的 CLI 技能，支持：
 - **自主授权流程**：`init` -> 浏览器授权 -> `verify`，无需人工申请 Token
@@ -75,10 +72,7 @@ lbp-growth-calendar auth init
 
 **🚨 重要安全警告：此步骤必须由用户手动在浏览器中完成，Agent 绝对不能自动调用浏览器或尝试自动化登录授权流程。**
 
-用户需要在浏览器中访问 `authUrl`（妙搭应用授权页面），完成登录和授权：
-- 📱 **妙搭应用**: https://bytedance.aiforce.cloud/app/app_179t4b8e4mv
-
-Agent 应该：
+用户需要在浏览器中访问 `authUrl`，完成登录和授权。Agent 应该：
 1. 向用户显示 `authUrl` 链接
 2. 明确告知用户需要手动访问该链接
 3. 等待用户完成授权后，再执行步骤 3 的 verify 命令
