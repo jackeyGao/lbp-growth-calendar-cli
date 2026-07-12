@@ -101,10 +101,11 @@ function saveToken(token) {
 }
 /**
  * 获取 Token（Bearer Token）
+ * 优先从配置文件读取，如未配置则返回内置的默认 Token
  */
 function getToken() {
     const config = readConfig();
-    return config.token || '';
+    return config.token || exports.DEFAULT_BEARER_TOKEN;
 }
 /**
  * 保存 API Key（通过 verify 获取）

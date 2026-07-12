@@ -20,6 +20,7 @@ export declare function getAuthCode(): string;
 export declare function saveToken(token: string): void;
 /**
  * 获取 Token（Bearer Token）
+ * 优先从配置文件读取，如未配置则返回内置的默认 Token
  */
 export declare function getToken(): string;
 /**

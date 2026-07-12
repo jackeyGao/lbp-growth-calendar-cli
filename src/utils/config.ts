@@ -64,10 +64,11 @@ export function saveToken(token: string): void {
 
 /**
  * 获取 Token（Bearer Token）
+ * 优先从配置文件读取，如未配置则返回内置的默认 Token
  */
 export function getToken(): string {
   const config = readConfig();
-  return config.token || '';
+  return config.token || DEFAULT_BEARER_TOKEN;
 }
 
 /**
