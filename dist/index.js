@@ -10,7 +10,7 @@ const program = new commander_1.Command();
 program
     .name('lbp-growth-calendar')
     .description('增长日历 CLI 工具 - 管理 DAU 数据、事件与订正\n\nAgent AI Friendly: 所有命令默认输出结构化 JSON，适合程序化调用。\n授权流程：lbp-growth-calendar auth init -> 浏览器授权 -> auth verify <code>')
-    .version('2.1.0');
+    .version('2.2.0');
 (0, auth_1.registerAuthCommand)(program);
 (0, dau_1.registerDauCommand)(program);
 (0, events_1.registerEventsCommand)(program);
