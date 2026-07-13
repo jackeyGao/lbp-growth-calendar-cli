@@ -68,8 +68,14 @@ lbp-growth-calendar correct --date 2026-07-15 --events-file events.json
 ### AI 渗透率
 
 ```bash
-lbp-growth-calendar penetration list --start-date 2026-07-01 --end-date 2026-07-31
-lbp-growth-calendar penetration upsert --type paid --date 2026-07-15 --customer-industry retail --arr 100000
+# 查询列表（支持按 AI 付费状态过滤）
+lbp-growth-calendar penetration list --start-date 2026-07-01 --end-date 2026-07-31 --ai-payment-status paid
+
+# 创建数据（支持 aiPaymentStatus 字段）
+lbp-growth-calendar penetration create --type paid --date 2026-07-15 --customer-industry retail --arr 100000 --ai-payment-status paid
+
+# 幂等更新或插入（支持 aiPaymentStatus 字段）
+lbp-growth-calendar penetration upsert --type paid --date 2026-07-15 --customer-industry retail --arr 100000 --ai-payment-status paid
 ```
 
 ## 输出格式
