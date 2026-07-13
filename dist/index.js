@@ -7,11 +7,17 @@ const events_1 = require("./commands/events");
 const correct_1 = require("./commands/correct");
 const auth_1 = require("./commands/auth");
 const penetration_1 = require("./commands/penetration");
+const config_1 = require("./utils/config");
 const program = new commander_1.Command();
 program
     .name('lbp-growth-calendar')
-    .description('增长日历 CLI 工具 - 管理 DAU 数据、事件与订正\n\nAgent AI Friendly: 所有命令默认输出结构化 JSON，适合程序化调用。\n授权流程：lbp-growth-calendar auth init -> 浏览器授权 -> auth verify <code>')
-    .version('2.4.0');
+    .description('增长日历 CLI 工具 - 管理 DAU 数据、事件与订正\n\nAgent AI Friendly: 所有命令默认输出结构化 JSON，适合程序化调用。')
+    .version('2.5.0')
+    .option('--token <token>', '本次命令使用的 Bearer Token（优先级高于环境变量和配置文件）')
+    .hook('preAction', (_thisCommand, actionCommand) => {
+    const opts = actionCommand.optsWithGlobals();
+    (0, config_1.setRuntimeToken)(opts.token);
+});
 (0, auth_1.registerAuthCommand)(program);
 (0, dau_1.registerDauCommand)(program);
 (0, events_1.registerEventsCommand)(program);

@@ -4,19 +4,12 @@ import * as os from 'os';
 
 const CONFIG_DIR = path.join(os.homedir(), '.lbp-growth-calendar');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
+const TOKEN_ENV_KEY = 'LBP_GROWTH_CALENDAR_TOKEN';
 
-// 内置的默认 Bearer Token（Agent 级别，用于访问 init/verify 接口）
-// 为什么硬编码了？ [解释下]
-// 在妙搭上OpenAPI必须开启Bearer Token, 所以必须携带。
-// 普通的bearer Token限制了所有权限， 必须完成人机认证方可成功调用。
-// 所以所有API属于 bearer token + 个人token（鉴权) 保护
-// bearer token 只是一张没有任何权限的入场券。
-export const DEFAULT_BEARER_TOKEN = 'e548uqkSvCZ_EtfcwL5ZIIoEiNVEI3Ws0-xpAaRlkDg';
+let runtimeToken: string | undefined;
 
 export interface Config {
-  authCode?: string;     // 通过 init 获取的授权码（临时，用于 verify）
-  token?: string;        // 用户提供的固定 Token（Bearer Token，用于 init/verify 接口）
-  apiKey?: string;       // 通过 verify 获取的动态 API Key（用于业务接口）
+  token?: string;
 }
 
 export function readConfig(): Config {
@@ -36,95 +29,47 @@ export function writeConfig(config: Config): void {
   fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2), 'utf8');
 }
 
-/**
- * 保存授权码（init 获取）
- */
-export function saveAuthCode(authCode: string): void {
-  const config = readConfig();
-  config.authCode = authCode;
-  writeConfig(config);
-}
-
-/**
- * 获取授权码
- */
-export function getAuthCode(): string {
-  const config = readConfig();
-  return config.authCode || '';
-}
-
-/**
- * 保存 Token（用户提供，等同于 Bearer Token）
- */
 export function saveToken(token: string): void {
-  const config = readConfig();
-  config.token = token;
-  writeConfig(config);
+  const normalized = token.trim();
+  if (!normalized) {
+    clearAuth();
+    return;
+  }
+  writeConfig({ token: normalized });
 }
 
-/**
- * 获取 Token（Bearer Token）
- * 优先从配置文件读取，如未配置则返回内置的默认 Token
- */
-export function getToken(): string {
-  const config = readConfig();
-  return config.token || DEFAULT_BEARER_TOKEN;
-}
-
-/**
- * 保存 API Key（通过 verify 获取）
- */
-export function saveApiKey(apiKey: string): void {
-  const config = readConfig();
-  config.apiKey = apiKey;
-  writeConfig(config);
-}
-
-/**
- * 获取 API Key
- */
-export function getApiKey(): string {
-  const config = readConfig();
-  return config.apiKey || '';
-}
-
-/**
- * 同时保存 Token 和 API Key
- */
-export function saveAuth(token: string, apiKey: string): void {
-  const config = readConfig();
-  config.token = token;
-  config.apiKey = apiKey;
-  writeConfig(config);
-}
-
-/**
- * 清除所有认证信息
- */
 export function clearAuth(): void {
-  const config = readConfig();
-  delete config.authCode;
-  delete config.token;
-  delete config.apiKey;
-  writeConfig(config);
+  if (fs.existsSync(CONFIG_FILE)) {
+    fs.rmSync(CONFIG_FILE, { force: true });
+  }
 }
 
-/**
- * 检查是否已完成授权（有 API Key）
- */
-export function isAuthorized(): boolean {
+export function getSavedToken(): string {
   const config = readConfig();
-  return !!config.apiKey;
+  return config.token || '';
 }
 
-/**
- * 检查是否有 Token
- */
+export function setRuntimeToken(token: string | undefined): void {
+  runtimeToken = token?.trim() || undefined;
+}
+
+export function getToken(): string {
+  if (runtimeToken) return runtimeToken;
+
+  const envToken = process.env[TOKEN_ENV_KEY]?.trim();
+  if (envToken) return envToken;
+
+  return getSavedToken();
+}
+
 export function hasToken(): boolean {
-  const config = readConfig();
-  return !!config.token;
+  return !!getToken();
 }
 
 export function configFilePath(): string {
   return CONFIG_FILE;
+}
+
+export function getTokenEnvKey(): string {
+  return TOKEN_ENV_KEY;
 }

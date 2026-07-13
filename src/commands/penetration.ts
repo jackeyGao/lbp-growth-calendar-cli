@@ -12,12 +12,14 @@ export function registerPenetrationCommand(program: Command): void {
     .description('按日期范围查询 AI 渗透数据列表')
     .option('--start-date <date>', '起始日期（含），YYYY-MM-DD')
     .option('--end-date <date>', '结束日期（含），YYYY-MM-DD')
+    .option('--ai-payment-status <status>', 'AI付费状态过滤: paid | unpaid')
     .action(async (opts) => {
       try {
         const reqOpts = getRequestOptions();
         const params = new URLSearchParams();
         if (opts.startDate) params.append('startDate', opts.startDate);
         if (opts.endDate) params.append('endDate', opts.endDate);
+        if (opts.aiPaymentStatus) params.append('aiPaymentStatus', opts.aiPaymentStatus);
         const query = params.toString() ? `?${params.toString()}` : '';
         const { status, data } = await apiRequest('GET', `/openapi/ai-penetration${query}`, reqOpts);
         handleApiResponse(status, data);
@@ -64,6 +66,7 @@ export function registerPenetrationCommand(program: Command): void {
     .option('--active-dialog-5plus-rate <number>', '激活当天用户主动5次以上对话率')
     .option('--weekly-scheduled-task-rate <number>', '激活后一周定时任务创建率')
     .option('--smart-partner-dau-by-activated <number>', '智能伙伴DAU/激活用户数')
+    .option('--ai-payment-status <status>', 'AI付费状态: paid | unpaid')
     .action(async (opts) => {
       try {
         const reqOpts = getRequestOptions();
@@ -108,6 +111,7 @@ export function registerPenetrationCommand(program: Command): void {
         if (opts.activeDialog5plusRate !== undefined) body.activeDialog5plusRate = parseFloat(opts.activeDialog5plusRate);
         if (opts.weeklyScheduledTaskRate !== undefined) body.weeklyScheduledTaskCreationRate = parseFloat(opts.weeklyScheduledTaskRate);
         if (opts.smartPartnerDauByActivated !== undefined) body.smartPartnerDauByActivatedUsers = parseFloat(opts.smartPartnerDauByActivated);
+        if (opts.aiPaymentStatus !== undefined) body.aiPaymentStatus = opts.aiPaymentStatus;
 
         const { status, data } = await apiRequest('POST', '/openapi/ai-penetration', reqOpts, body);
         handleApiResponse(status, data, 201);
@@ -154,6 +158,7 @@ export function registerPenetrationCommand(program: Command): void {
     .option('--active-dialog-5plus-rate <number>', '激活当天用户主动5次以上对话率')
     .option('--weekly-scheduled-task-rate <number>', '激活后一周定时任务创建率')
     .option('--smart-partner-dau-by-activated <number>', '智能伙伴DAU/激活用户数')
+    .option('--ai-payment-status <status>', 'AI付费状态: paid | unpaid')
     .action(async (opts) => {
       try {
         const reqOpts = getRequestOptions();
@@ -215,6 +220,7 @@ export function registerPenetrationCommand(program: Command): void {
         if (opts.activeDialog5plusRate !== undefined) body.activeDialog5plusRate = parseFloat(opts.activeDialog5plusRate);
         if (opts.weeklyScheduledTaskRate !== undefined) body.weeklyScheduledTaskCreationRate = parseFloat(opts.weeklyScheduledTaskRate);
         if (opts.smartPartnerDauByActivated !== undefined) body.smartPartnerDauByActivatedUsers = parseFloat(opts.smartPartnerDauByActivated);
+        if (opts.aiPaymentStatus !== undefined) body.aiPaymentStatus = opts.aiPaymentStatus;
 
         const { status, data } = await apiRequest('PUT', '/openapi/ai-penetration', reqOpts, body);
         handleApiResponse(status, data, 200);
