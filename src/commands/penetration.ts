@@ -125,8 +125,8 @@ export function registerPenetrationCommand(program: Command): void {
     .description('按幂等键更新或插入 AI 渗透数据（free: dataDate+type+tenantType; paid: dataDate+type+customerIndustry）')
     .requiredOption('--type <type>', '类型: free | paid')
     .requiredOption('--date <date>', '数据日期，YYYY-MM-DD')
-    .option('--tenant-type <type>', '租户类型（type=free 时必填）')
-    .option('--customer-industry <industry>', '客户行业（type=paid 时必填）')
+    .option('--tenant-type <type>', '租户类型（type=free 时必填，作为幂等键之一）')
+    .option('--customer-industry <industry>', '客户行业（type=paid 时必填，作为幂等键之一）')
     .option('--feishu-dau <number>', '飞书DAU')
     .option('--feishu-wau <number>', '飞书WAU')
     .option('--feishu-pc-dau <number>', '飞书PC DAU')
@@ -157,16 +157,33 @@ export function registerPenetrationCommand(program: Command): void {
     .action(async (opts) => {
       try {
         const reqOpts = getRequestOptions();
+
+        // 校验幂等键必填字段
+        if (opts.type === 'free' && !opts.tenantType) {
+          outputError(
+            'type=free 时，--tenant-type 为必填参数（作为幂等键的一部分）',
+            'MISSING_TENANT_TYPE'
+          );
+          return;
+        }
+        if (opts.type === 'paid' && !opts.customerIndustry) {
+          outputError(
+            'type=paid 时，--customer-industry 为必填参数（作为幂等键的一部分）',
+            'MISSING_CUSTOMER_INDUSTRY'
+          );
+          return;
+        }
+
         const body: Record<string, unknown> = {
           type: opts.type,
           dataDate: opts.date,
         };
 
-        // 根据类型添加必填字段
-        if (opts.type === 'free' && opts.tenantType) {
+        // 根据类型添加幂等键字段
+        if (opts.type === 'free') {
           body.tenantType = opts.tenantType;
         }
-        if (opts.type === 'paid' && opts.customerIndustry) {
+        if (opts.type === 'paid') {
           body.customerIndustry = opts.customerIndustry;
         }
 
