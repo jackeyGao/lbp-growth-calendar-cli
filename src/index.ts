@@ -5,18 +5,20 @@ import { registerDauCommand } from './commands/dau';
 import { registerEventsCommand } from './commands/events';
 import { registerCorrectCommand } from './commands/correct';
 import { registerAuthCommand } from './commands/auth';
+import { registerPenetrationCommand } from './commands/penetration';
 
 const program = new Command();
 
 program
   .name('lbp-growth-calendar')
   .description('增长日历 CLI 工具 - 管理 DAU 数据、事件与订正\n\nAgent AI Friendly: 所有命令默认输出结构化 JSON，适合程序化调用。\n授权流程：lbp-growth-calendar auth init -> 浏览器授权 -> auth verify <code>')
-  .version('2.3.0');
+  .version('2.4.0');
 
 registerAuthCommand(program);
 registerDauCommand(program);
 registerEventsCommand(program);
 registerCorrectCommand(program);
+registerPenetrationCommand(program);
 
 program.parse();
 
