@@ -26,8 +26,9 @@ function registerAuthCommand(program) {
                 return;
             }
             const response = data;
-            // 保存授权码（Bearer Token 已内置，无需保存）
+            // 保存授权码和 Bearer Token（确保配置完整）
             (0, config_1.saveAuthCode)(response.code);
+            (0, config_1.saveToken)(config_1.DEFAULT_BEARER_TOKEN);
             (0, http_1.outputJSON)({
                 ok: true,
                 message: '用户授权流程已发起，授权码已保存到本地配置',

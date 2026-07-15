@@ -50,8 +50,9 @@ export function registerAuthCommand(program: Command): void {
 
         const response = data as { code: string; authUrl: string };
 
-        // 保存授权码（Bearer Token 已内置，无需保存）
+        // 保存授权码和 Bearer Token（确保配置完整）
         saveAuthCode(response.code);
+        saveToken(DEFAULT_BEARER_TOKEN);
 
         outputJSON({
           ok: true,
