@@ -18,6 +18,12 @@ metadata:
 
 - Node.js 18+
 
+## 安装
+
+```bash
+npm install -g lbp-growth-calendar
+```
+
 ## 授权流程（推荐）
 
 CLI 使用内置 Bearer Token + 用户 API Key 的双层认证机制。
