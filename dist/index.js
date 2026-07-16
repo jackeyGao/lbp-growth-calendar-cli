@@ -6,7 +6,6 @@ const dau_1 = require("./commands/dau");
 const events_1 = require("./commands/events");
 const correct_1 = require("./commands/correct");
 const auth_1 = require("./commands/auth");
-const penetration_1 = require("./commands/penetration");
 const program = new commander_1.Command();
 program
     .name('lbp-growth-calendar')
@@ -16,7 +15,6 @@ program
 (0, dau_1.registerDauCommand)(program);
 (0, events_1.registerEventsCommand)(program);
 (0, correct_1.registerCorrectCommand)(program);
-(0, penetration_1.registerPenetrationCommand)(program);
 program.parse();
 if (!process.argv.slice(2).length) {
     program.outputHelp();

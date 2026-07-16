@@ -1,8 +1,8 @@
 ---
 name: lbp-growth-calendar
-description: 增长日历 CLI：DAU 数据查询、增长事件管理、数据订正、AI 渗透率数据写入；适用于需要通过非交互式命令批量查询或修改增长日历数据的场景。
+description: 增长日历 CLI：DAU 数据查询、增长事件管理、数据订正；适用于需要通过非交互式命令批量查询或修改增长日历数据的场景。
 metadata:
-  version: 2.6.0
+  version: 2.6.1
 ---
 
 # 增长日历 CLI
@@ -12,7 +12,6 @@ metadata:
 - 按日期范围查询每日 DAU 数据
 - 增长事件增删改查
 - 数据订正（原子模式与全量模式）
-- AI 渗透率数据查询与写入
 
 ## 前置要求
 
@@ -135,18 +134,6 @@ lbp-growth-calendar correct-event add --date 2026-07-15 --event-type activation 
 lbp-growth-calendar correct --date 2026-07-15 --events-file events.json
 ```
 
-### AI 渗透率
-
-```bash
-# 查询列表（支持按 AI 付费状态过滤）
-lbp-growth-calendar penetration list --start-date 2026-07-01 --end-date 2026-07-31 --ai-payment-status paid
-
-# 幂等更新或插入（唯一写入接口，无记录则创建，有则更新）
-# free 类型幂等键: dataDate + type + tenantType + aiPaymentStatus
-# paid 类型幂等键: dataDate + type + customerIndustry + aiPaymentStatus
-lbp-growth-calendar penetration upsert --type paid --date 2026-07-15 --customer-industry retail --ai-payment-status paid --arr 100000
-```
-
 ## 命令参考
 
 ### Auth 命令（认证管理）
@@ -174,13 +161,6 @@ lbp-growth-calendar penetration upsert --type paid --date 2026-07-15 --customer-
 | `events create` | 新增事件 |
 | `events update <id>` | 更新事件 |
 | `events delete <id>` | 删除事件 |
-
-### Penetration 命令（AI 渗透率）
-
-| 命令 | 说明 |
-|------|------|
-| `penetration list` | 查询 AI 渗透数据列表 |
-| `penetration upsert` | 幂等更新或插入 |
 
 ## 输出格式
 

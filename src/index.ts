@@ -5,7 +5,6 @@ import { registerDauCommand } from './commands/dau';
 import { registerEventsCommand } from './commands/events';
 import { registerCorrectCommand } from './commands/correct';
 import { registerAuthCommand } from './commands/auth';
-import { registerPenetrationCommand } from './commands/penetration';
 
 const program = new Command();
 
@@ -18,7 +17,6 @@ registerAuthCommand(program);
 registerDauCommand(program);
 registerEventsCommand(program);
 registerCorrectCommand(program);
-registerPenetrationCommand(program);
 
 program.parse();
 
