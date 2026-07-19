@@ -72,7 +72,8 @@ function registerEventsCommand(program) {
     });
     events
         .command('update <id>')
-        .description('根据 ID 更新事件（部分字段）')
+        .description('根据 ID 更新事件（部分字段，支持日期变更）')
+        .option('--date <date>', '事件日期，YYYY-MM-DD（变更日期）')
         .option('--name <name>', '事件名称')
         .option('--expected-users <number>', '预计影响用户数（万）')
         .option('--tags <tags>', '分类标签，逗号分隔')
@@ -80,6 +81,8 @@ function registerEventsCommand(program) {
         try {
             const reqOpts = (0, http_1.getRequestOptions)();
             const body = {};
+            if (opts.date !== undefined)
+                body.date = opts.date;
             if (opts.name !== undefined)
                 body.name = opts.name;
             if (opts.expectedUsers !== undefined)
@@ -88,7 +91,7 @@ function registerEventsCommand(program) {
                 body.tags = opts.tags.split(',').map((t) => t.trim()).filter(Boolean);
             }
             if (Object.keys(body).length === 0) {
-                (0, http_1.outputError)('至少需要提供一个要更新的字段（--name, --expected-users, --tags）', 'INVALID_ARGS');
+                (0, http_1.outputError)('至少需要提供一个要更新的字段（--date, --name, --expected-users, --tags）', 'INVALID_ARGS');
             }
             const { status, data } = await (0, http_1.apiRequest)('PUT', `/openapi/events/${id}`, reqOpts, body);
             (0, http_1.handleApiResponse)(status, data);

@@ -2,7 +2,7 @@
 name: lbp-growth-calendar
 description: 增长日历 CLI：DAU 数据查询、增长事件管理、数据订正；适用于需要通过非交互式命令批量查询或修改增长日历数据的场景。
 metadata:
-  version: 2.7.0
+  version: 2.8.0
 ---
 
 # 增长日历 CLI
@@ -116,7 +116,7 @@ lbp-growth-calendar dau list --start-date 2026-07-01 --end-date 2026-07-31
 lbp-growth-calendar events list --start-date 2026-07-01 --end-date 2026-07-31
 lbp-growth-calendar events get <event-id>
 lbp-growth-calendar events create --date 2026-07-15 --event-type activation --name "渠道投放-抖音" --expected-users 4.2 --tags "渠道&SMB"
-lbp-growth-calendar events update <event-id> --name "渠道投放-快手" --expected-users 5.1
+lbp-growth-calendar events update <event-id> --date 2026-07-20 --name "渠道投放-快手" --expected-users 5.1
 lbp-growth-calendar events delete <event-id>
 ```
 

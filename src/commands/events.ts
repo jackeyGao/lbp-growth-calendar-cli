@@ -78,7 +78,8 @@ export function registerEventsCommand(program: Command): void {
 
   events
     .command('update <id>')
-    .description('根据 ID 更新事件（部分字段）')
+    .description('根据 ID 更新事件（部分字段，支持日期变更）')
+    .option('--date <date>', '事件日期，YYYY-MM-DD（变更日期）')
     .option('--name <name>', '事件名称')
     .option('--expected-users <number>', '预计影响用户数（万）')
     .option('--tags <tags>', '分类标签，逗号分隔')
@@ -86,6 +87,7 @@ export function registerEventsCommand(program: Command): void {
       try {
         const reqOpts = getRequestOptions();
         const body: Record<string, unknown> = {};
+        if (opts.date !== undefined) body.date = opts.date;
         if (opts.name !== undefined) body.name = opts.name;
         if (opts.expectedUsers !== undefined) body.expectedUsers = parseFloat(opts.expectedUsers);
         if (opts.tags !== undefined) {
@@ -93,7 +95,7 @@ export function registerEventsCommand(program: Command): void {
         }
         if (Object.keys(body).length === 0) {
           outputError(
-            '至少需要提供一个要更新的字段（--name, --expected-users, --tags）',
+            '至少需要提供一个要更新的字段（--date, --name, --expected-users, --tags）',
             'INVALID_ARGS'
           );
         }
