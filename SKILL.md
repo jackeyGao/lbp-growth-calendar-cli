@@ -2,7 +2,7 @@
 name: lbp-growth-calendar
 description: 增长日历 CLI：DAU 数据查询、增长事件管理、数据订正；适用于需要通过非交互式命令批量查询或修改增长日历数据的场景。
 metadata:
-  version: 2.8.0
+  version: 2.9.0
 ---
 
 # 增长日历 CLI
